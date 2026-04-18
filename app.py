@@ -31,31 +31,444 @@ warnings.filterwarnings("ignore")
 
 st.set_page_config(
     page_title="QuantFolio",
-    page_icon="Q",
+    page_icon="📐",
     layout="wide",
     initial_sidebar_state="expanded",
 )
 
+# ──────────────────────────────────────────────────────────────
+# PREMIUM CSS — Charcoal / Emerald Theme
+# ──────────────────────────────────────────────────────────────
+
 st.markdown("""
 <style>
-    div[data-testid="stMetric"] {
-        background: rgba(255, 255, 255, 0.03);
-        border: 1px solid rgba(255, 255, 255, 0.08);
-        border-radius: 8px;
-        padding: 12px 16px;
-    }
-    div[data-testid="stMetric"] label {
-        font-size: 0.8rem !important;
-        color: rgba(255, 255, 255, 0.5) !important;
-        text-transform: uppercase;
-        letter-spacing: 0.05em;
-    }
-    section[data-testid="stSidebar"] {
-        border-right: 1px solid rgba(255, 255, 255, 0.06);
-    }
-    .stTabs [data-baseweb="tab-list"] { gap: 8px; }
-    .stTabs [data-baseweb="tab"] { border-radius: 6px; padding: 8px 16px; }
-    hr { border-color: rgba(255, 255, 255, 0.06) !important; }
+/* ═══════ FONT IMPORTS ═══════ */
+@import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;500;600;700&family=DM+Sans:wght@300;400;500;600;700&family=JetBrains+Mono:wght@300;400;500;600&display=swap');
+
+/* ═══════ ROOT VARIABLES ═══════ */
+:root {
+    --charcoal-900: #0a0a0a;
+    --charcoal-800: #0d0d0d;
+    --charcoal-700: #141414;
+    --charcoal-600: #1a1a1a;
+    --charcoal-500: #222222;
+    --charcoal-400: #2a2a2a;
+    --charcoal-300: #333333;
+    --emerald-500: #2ecc71;
+    --emerald-400: #27ae60;
+    --emerald-300: #1abc9c;
+    --emerald-glow: rgba(46, 204, 113, 0.15);
+    --emerald-glow-strong: rgba(46, 204, 113, 0.35);
+    --text-primary: #e8e8e8;
+    --text-secondary: rgba(232, 232, 232, 0.6);
+    --text-muted: rgba(232, 232, 232, 0.35);
+    --glass-bg: rgba(20, 20, 20, 0.6);
+    --glass-border: rgba(46, 204, 113, 0.12);
+    --glass-border-hover: rgba(46, 204, 113, 0.25);
+}
+
+/* ═══════ KEYFRAME ANIMATIONS ═══════ */
+@keyframes gradientShift {
+    0%   { background-position: 0% 50%; }
+    50%  { background-position: 100% 50%; }
+    100% { background-position: 0% 50%; }
+}
+@keyframes fadeInUp {
+    from { opacity: 0; transform: translateY(24px); }
+    to   { opacity: 1; transform: translateY(0); }
+}
+@keyframes fadeIn {
+    from { opacity: 0; }
+    to   { opacity: 1; }
+}
+@keyframes pulseGlow {
+    0%, 100% { box-shadow: 0 0 20px rgba(46, 204, 113, 0.08); }
+    50%      { box-shadow: 0 0 40px rgba(46, 204, 113, 0.18); }
+}
+@keyframes shimmer {
+    0%   { background-position: -200% 0; }
+    100% { background-position: 200% 0; }
+}
+@keyframes logoFloat {
+    0%, 100% { transform: translateY(0px); }
+    50%      { transform: translateY(-6px); }
+}
+@keyframes borderGlow {
+    0%, 100% { border-color: rgba(46, 204, 113, 0.10); }
+    50%      { border-color: rgba(46, 204, 113, 0.30); }
+}
+
+/* ═══════ GLOBAL OVERRIDES ═══════ */
+html, body, [data-testid="stAppViewContainer"] {
+    background-color: var(--charcoal-900) !important;
+    color: var(--text-primary) !important;
+    font-family: 'DM Sans', sans-serif !important;
+}
+
+.main .block-container {
+    padding-top: 1rem !important;
+    max-width: 1400px;
+}
+
+/* ═══════ SCROLLBAR ═══════ */
+::-webkit-scrollbar { width: 6px; }
+::-webkit-scrollbar-track { background: var(--charcoal-800); }
+::-webkit-scrollbar-thumb {
+    background: var(--charcoal-400);
+    border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover { background: var(--emerald-400); }
+
+/* ═══════ ANIMATED GRADIENT HEADER ═══════ */
+.qf-header {
+    background: linear-gradient(135deg,
+        var(--charcoal-800) 0%,
+        rgba(46, 204, 113, 0.06) 25%,
+        var(--charcoal-700) 50%,
+        rgba(26, 188, 156, 0.06) 75%,
+        var(--charcoal-800) 100%);
+    background-size: 400% 400%;
+    animation: gradientShift 12s ease infinite;
+    border: 1px solid var(--glass-border);
+    border-radius: 16px;
+    padding: 2.5rem 3rem;
+    margin-bottom: 2rem;
+    position: relative;
+    overflow: hidden;
+    animation: gradientShift 12s ease infinite, fadeInUp 0.8s ease-out;
+}
+.qf-header::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: radial-gradient(ellipse at 20% 50%,
+        rgba(46, 204, 113, 0.04) 0%, transparent 70%);
+    pointer-events: none;
+}
+.qf-header-content {
+    display: flex;
+    align-items: center;
+    gap: 1.5rem;
+    position: relative;
+    z-index: 1;
+}
+.qf-logo {
+    width: 64px;
+    height: 64px;
+    animation: logoFloat 4s ease-in-out infinite;
+    filter: drop-shadow(0 0 12px rgba(46, 204, 113, 0.3));
+    flex-shrink: 0;
+}
+.qf-title {
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 3rem;
+    font-weight: 700;
+    color: var(--text-primary);
+    letter-spacing: -0.02em;
+    line-height: 1.1;
+    margin: 0;
+}
+.qf-title span {
+    background: linear-gradient(135deg, var(--emerald-500), var(--emerald-300));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+}
+.qf-subtitle {
+    font-family: 'DM Sans', sans-serif;
+    font-size: 0.95rem;
+    color: var(--text-secondary);
+    margin-top: 0.35rem;
+    font-weight: 300;
+    letter-spacing: 0.02em;
+}
+.qf-version {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.65rem;
+    color: var(--emerald-500);
+    background: rgba(46, 204, 113, 0.08);
+    border: 1px solid rgba(46, 204, 113, 0.15);
+    padding: 0.15rem 0.5rem;
+    border-radius: 4px;
+    margin-left: 0.75rem;
+    letter-spacing: 0.05em;
+    vertical-align: super;
+}
+
+/* ═══════ SECTION HEADERS ═══════ */
+h2, .qf-section-title {
+    font-family: 'Cormorant Garamond', serif !important;
+    font-weight: 600 !important;
+    color: var(--text-primary) !important;
+    letter-spacing: -0.01em !important;
+    animation: fadeInUp 0.6s ease-out;
+}
+h3, h4 {
+    font-family: 'DM Sans', sans-serif !important;
+    font-weight: 500 !important;
+    color: var(--text-primary) !important;
+}
+
+/* ═══════ GLASSMORPHISM METRIC CARDS ═══════ */
+div[data-testid="stMetric"] {
+    background: var(--glass-bg) !important;
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    border: 1px solid var(--glass-border) !important;
+    border-radius: 12px !important;
+    padding: 1.2rem 1.4rem !important;
+    transition: all 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+    animation: fadeIn 0.5s ease-out, pulseGlow 4s ease-in-out infinite;
+}
+div[data-testid="stMetric"]:hover {
+    border-color: var(--glass-border-hover) !important;
+    background: rgba(20, 20, 20, 0.8) !important;
+    transform: translateY(-2px);
+    box-shadow: 0 8px 32px rgba(46, 204, 113, 0.1),
+                0 0 0 1px rgba(46, 204, 113, 0.15);
+}
+div[data-testid="stMetric"] label {
+    font-family: 'DM Sans', sans-serif !important;
+    font-size: 0.72rem !important;
+    font-weight: 500 !important;
+    color: var(--text-muted) !important;
+    text-transform: uppercase !important;
+    letter-spacing: 0.08em !important;
+}
+div[data-testid="stMetric"] [data-testid="stMetricValue"] {
+    font-family: 'JetBrains Mono', monospace !important;
+    font-size: 1.6rem !important;
+    font-weight: 600 !important;
+    color: var(--emerald-500) !important;
+}
+div[data-testid="stMetric"] [data-testid="stMetricDelta"] {
+    font-family: 'JetBrains Mono', monospace !important;
+}
+
+/* ═══════ SIDEBAR ═══════ */
+section[data-testid="stSidebar"] {
+    background: var(--charcoal-800) !important;
+    border-right: 1px solid rgba(46, 204, 113, 0.08) !important;
+}
+section[data-testid="stSidebar"] .stMarkdown h2,
+section[data-testid="stSidebar"] .stMarkdown h3 {
+    font-family: 'DM Sans', sans-serif !important;
+    font-weight: 600 !important;
+    font-size: 0.85rem !important;
+    text-transform: uppercase !important;
+    letter-spacing: 0.1em !important;
+    color: var(--text-muted) !important;
+    margin-top: 1.5rem !important;
+}
+section[data-testid="stSidebar"] .stRadio label,
+section[data-testid="stSidebar"] .stMultiSelect label,
+section[data-testid="stSidebar"] .stSlider label,
+section[data-testid="stSidebar"] .stSelectbox label,
+section[data-testid="stSidebar"] .stCheckbox label,
+section[data-testid="stSidebar"] .stTextInput label,
+section[data-testid="stSidebar"] .stDateInput label {
+    font-family: 'DM Sans', sans-serif !important;
+    font-size: 0.82rem !important;
+    color: var(--text-secondary) !important;
+}
+
+/* ═══════ BUTTONS ═══════ */
+.stButton > button[kind="primary"],
+.stButton > button[data-testid="stBaseButton-primary"] {
+    background: linear-gradient(135deg, var(--emerald-400), var(--emerald-300)) !important;
+    color: var(--charcoal-900) !important;
+    font-family: 'DM Sans', sans-serif !important;
+    font-weight: 600 !important;
+    font-size: 0.85rem !important;
+    letter-spacing: 0.06em !important;
+    text-transform: uppercase !important;
+    border: none !important;
+    border-radius: 8px !important;
+    padding: 0.6rem 1.5rem !important;
+    transition: all 0.3s ease !important;
+    box-shadow: 0 4px 16px rgba(46, 204, 113, 0.2) !important;
+}
+.stButton > button[kind="primary"]:hover,
+.stButton > button[data-testid="stBaseButton-primary"]:hover {
+    transform: translateY(-1px) !important;
+    box-shadow: 0 6px 24px rgba(46, 204, 113, 0.35) !important;
+}
+.stDownloadButton > button {
+    background: var(--glass-bg) !important;
+    border: 1px solid var(--glass-border) !important;
+    color: var(--emerald-500) !important;
+    font-family: 'JetBrains Mono', monospace !important;
+    font-size: 0.78rem !important;
+    border-radius: 8px !important;
+    transition: all 0.3s ease !important;
+}
+.stDownloadButton > button:hover {
+    border-color: var(--emerald-500) !important;
+    background: rgba(46, 204, 113, 0.06) !important;
+}
+
+/* ═══════ TABS ═══════ */
+.stTabs [data-baseweb="tab-list"] {
+    gap: 4px !important;
+    background: var(--charcoal-700) !important;
+    border-radius: 10px !important;
+    padding: 4px !important;
+    border: 1px solid rgba(255,255,255,0.04);
+}
+.stTabs [data-baseweb="tab"] {
+    font-family: 'DM Sans', sans-serif !important;
+    font-size: 0.82rem !important;
+    font-weight: 500 !important;
+    border-radius: 8px !important;
+    padding: 8px 16px !important;
+    color: var(--text-secondary) !important;
+    transition: all 0.25s ease !important;
+}
+.stTabs [aria-selected="true"] {
+    background: rgba(46, 204, 113, 0.1) !important;
+    color: var(--emerald-500) !important;
+    border-bottom-color: transparent !important;
+}
+
+/* ═══════ DATAFRAMES ═══════ */
+[data-testid="stDataFrame"] {
+    border: 1px solid var(--glass-border) !important;
+    border-radius: 10px !important;
+    overflow: hidden;
+    animation: fadeIn 0.5s ease-out;
+}
+
+/* ═══════ HR / DIVIDERS ═══════ */
+hr {
+    border: none !important;
+    height: 1px !important;
+    background: linear-gradient(90deg,
+        transparent,
+        rgba(46, 204, 113, 0.15),
+        transparent) !important;
+    margin: 2rem 0 !important;
+}
+
+/* ═══════ GLASSMORPHISM SECTION WRAPPERS ═══════ */
+.qf-glass-card {
+    background: var(--glass-bg);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    border: 1px solid var(--glass-border);
+    border-radius: 14px;
+    padding: 1.5rem 1.8rem;
+    margin-bottom: 1.5rem;
+    animation: fadeInUp 0.6s ease-out;
+    transition: border-color 0.3s ease;
+}
+.qf-glass-card:hover {
+    border-color: var(--glass-border-hover);
+}
+
+/* ═══════ PORTFOLIO STRATEGY CARDS ═══════ */
+.qf-strategy-label {
+    font-family: 'DM Sans', sans-serif;
+    font-size: 0.65rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    padding: 0.25rem 0.65rem;
+    border-radius: 4px;
+    display: inline-block;
+    margin-bottom: 0.5rem;
+}
+.qf-strategy-sharpe {
+    color: #22c55e;
+    background: rgba(34, 197, 94, 0.08);
+    border: 1px solid rgba(34, 197, 94, 0.2);
+}
+.qf-strategy-minvar {
+    color: #f59e0b;
+    background: rgba(245, 158, 11, 0.08);
+    border: 1px solid rgba(245, 158, 11, 0.2);
+}
+.qf-strategy-rp {
+    color: #ec4899;
+    background: rgba(236, 72, 153, 0.08);
+    border: 1px solid rgba(236, 72, 153, 0.2);
+}
+
+/* ═══════ LOADING SPINNER OVERRIDE ═══════ */
+.stSpinner > div {
+    border-top-color: var(--emerald-500) !important;
+}
+
+/* ═══════ FADE-IN UTILITY ═══════ */
+.qf-fade-in {
+    animation: fadeInUp 0.6s ease-out;
+}
+.qf-fade-in-delay-1 { animation: fadeInUp 0.6s ease-out 0.1s both; }
+.qf-fade-in-delay-2 { animation: fadeInUp 0.6s ease-out 0.2s both; }
+.qf-fade-in-delay-3 { animation: fadeInUp 0.6s ease-out 0.3s both; }
+
+/* ═══════ BLOCKQUOTE / INSIGHTS ═══════ */
+blockquote {
+    border-left: 3px solid var(--emerald-500) !important;
+    background: rgba(46, 204, 113, 0.03) !important;
+    padding: 0.8rem 1.2rem !important;
+    border-radius: 0 8px 8px 0 !important;
+    font-family: 'DM Sans', sans-serif !important;
+    font-size: 0.88rem !important;
+    color: var(--text-secondary) !important;
+}
+
+/* ═══════ FOOTER ═══════ */
+.qf-footer {
+    text-align: center;
+    color: var(--text-muted);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 0.78rem;
+    padding: 2rem 0 1rem;
+    animation: fadeIn 0.8s ease-out;
+}
+.qf-footer a {
+    color: var(--emerald-500);
+    text-decoration: none;
+    transition: color 0.2s ease;
+}
+.qf-footer a:hover { color: var(--emerald-300); }
+.qf-footer-mono {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.68rem;
+    color: var(--text-muted);
+    opacity: 0.6;
+    margin-top: 0.5rem;
+}
+
+/* ═══════ PLOTLY CHART CONTAINERS ═══════ */
+[data-testid="stPlotlyChart"] {
+    border: 1px solid var(--glass-border);
+    border-radius: 12px;
+    overflow: hidden;
+    animation: fadeIn 0.5s ease-out;
+    transition: border-color 0.3s ease, box-shadow 0.3s ease;
+}
+[data-testid="stPlotlyChart"]:hover {
+    border-color: var(--glass-border-hover);
+    box-shadow: 0 4px 24px rgba(46, 204, 113, 0.06);
+}
+
+/* ═══════ MULTISELECT PILLS ═══════ */
+[data-testid="stMultiSelect"] span[data-baseweb="tag"] {
+    background: rgba(46, 204, 113, 0.1) !important;
+    border: 1px solid rgba(46, 204, 113, 0.2) !important;
+    color: var(--emerald-500) !important;
+    font-family: 'JetBrains Mono', monospace !important;
+    font-size: 0.75rem !important;
+    border-radius: 6px !important;
+}
+
+/* ═══════ WARNINGS / ERRORS ═══════ */
+[data-testid="stAlert"] {
+    border-radius: 10px !important;
+    font-family: 'DM Sans', sans-serif !important;
+    animation: fadeIn 0.4s ease-out;
+}
 </style>
 """, unsafe_allow_html=True)
 
@@ -119,11 +532,6 @@ def find_optimal_portfolio(mean_returns, cov_matrix, risk_free_rate, objective="
 
 
 def find_risk_parity_portfolio(cov_matrix):
-    """
-    Risk Parity: each asset contributes equally to total portfolio risk.
-    Minimizes squared differences between each asset's risk contribution
-    and the target (1/n of total risk).
-    """
     n_assets = cov_matrix.shape[0]
     initial_weights = np.ones(n_assets) / n_assets
     bounds = tuple((0.01, 1.0) for _ in range(n_assets))
@@ -154,6 +562,7 @@ def compute_efficient_frontier(mean_returns, cov_matrix, risk_free_rate, n_point
     n_assets = len(mean_returns)
     bounds = tuple((0.0, 1.0) for _ in range(n_assets))
     initial_weights = np.ones(n_assets) / n_assets
+
     target_returns = np.linspace(mean_returns.min(), mean_returns.max(), n_points)
     frontier_volatilities = []
     frontier_returns = []
@@ -248,58 +657,87 @@ def fetch_price_data(tickers, start, end):
 
 
 # ──────────────────────────────────────────────────────────────
-# PLOTTING
+# PLOTLY THEME — Charcoal / Emerald
 # ──────────────────────────────────────────────────────────────
 
 COLORS = {
-    "frontier": "#6366f1",
-    "cml": "#a78bfa",
-    "sharpe": "#22c55e",
-    "min_var": "#f59e0b",
-    "risk_parity": "#ec4899",
-    "assets": "#ef4444",
+    "frontier":     "#2ecc71",
+    "cml":          "#1abc9c",
+    "sharpe":       "#22c55e",
+    "min_var":      "#f59e0b",
+    "risk_parity":  "#ec4899",
+    "assets":       "#64748b",
     "equal_weight": "#94a3b8",
-    "bg": "rgba(0,0,0,0)",
-    "grid": "rgba(255,255,255,0.06)",
-    "text": "rgba(255,255,255,0.7)",
+    "bg":           "rgba(0,0,0,0)",
+    "grid":         "rgba(46, 204, 113, 0.06)",
+    "text":         "rgba(232, 232, 232, 0.6)",
+    "text_bright":  "rgba(232, 232, 232, 0.85)",
 }
 
 PLOT_LAYOUT = dict(
     paper_bgcolor=COLORS["bg"],
     plot_bgcolor=COLORS["bg"],
-    font=dict(color=COLORS["text"], size=12),
-    margin=dict(l=40, r=40, t=50, b=40),
-    xaxis=dict(gridcolor=COLORS["grid"], zeroline=False),
-    yaxis=dict(gridcolor=COLORS["grid"], zeroline=False),
+    font=dict(color=COLORS["text"], size=12, family="DM Sans, sans-serif"),
+    margin=dict(l=48, r=24, t=56, b=48),
+    xaxis=dict(
+        gridcolor=COLORS["grid"],
+        zeroline=False,
+        linecolor="rgba(46, 204, 113, 0.1)",
+        tickfont=dict(family="JetBrains Mono, monospace", size=10),
+    ),
+    yaxis=dict(
+        gridcolor=COLORS["grid"],
+        zeroline=False,
+        linecolor="rgba(46, 204, 113, 0.1)",
+        tickfont=dict(family="JetBrains Mono, monospace", size=10),
+    ),
+    title_font=dict(family="DM Sans, sans-serif", size=16, color=COLORS["text_bright"]),
+    hoverlabel=dict(
+        bgcolor="rgba(14, 14, 14, 0.95)",
+        bordercolor="rgba(46, 204, 113, 0.3)",
+        font=dict(family="JetBrains Mono, monospace", size=12, color="#e8e8e8"),
+    ),
 )
+
+# Emerald-tinted palette for pie/bar charts
+EMERALD_PALETTE = [
+    "#2ecc71", "#1abc9c", "#27ae60", "#16a085",
+    "#22c55e", "#10b981", "#059669", "#047857",
+    "#34d399", "#6ee7b7", "#a7f3d0", "#d1fae5",
+]
 
 
 def plot_efficient_frontier(
-        frontier_vol, frontier_ret,
-        mc_vol, mc_ret, mc_sharpe,
-        sharpe_vol, sharpe_ret,
-        minvar_vol, minvar_ret,
-        rp_vol, rp_ret,
-        asset_vols, asset_rets, tickers,
-        risk_free, show_cml, show_rp,
+    frontier_vol, frontier_ret,
+    mc_vol, mc_ret, mc_sharpe,
+    sharpe_vol, sharpe_ret,
+    minvar_vol, minvar_ret,
+    rp_vol, rp_ret,
+    asset_vols, asset_rets, tickers,
+    risk_free, show_cml, show_rp,
 ):
     fig = go.Figure()
 
+    # Monte Carlo cloud
     fig.add_trace(go.Scatter(
         x=mc_vol * 100, y=mc_ret * 100, mode="markers",
-        marker=dict(size=2.5, opacity=0.3, color=mc_sharpe,
-                    colorscale="Viridis",
-                    colorbar=dict(title="Sharpe", thickness=12, len=0.5)),
+        marker=dict(size=2.5, opacity=0.25, color=mc_sharpe,
+                    colorscale=[[0, "#0d0d0d"], [0.3, "#1a1a1a"], [0.6, "#1abc9c"], [1, "#2ecc71"]],
+                    colorbar=dict(title=dict(text="Sharpe", font=dict(size=11)),
+                                  thickness=10, len=0.4,
+                                  tickfont=dict(family="JetBrains Mono", size=9))),
         name="Random Portfolios",
         hovertemplate="Vol: %{x:.1f}%<br>Ret: %{y:.1f}%<extra></extra>",
     ))
 
+    # Efficient frontier line
     fig.add_trace(go.Scatter(
         x=frontier_vol * 100, y=frontier_ret * 100,
         mode="lines", line=dict(color=COLORS["frontier"], width=3),
         name="Efficient Frontier",
     ))
 
+    # Capital Market Line
     if show_cml:
         cml_x_max = max(asset_vols.max(), sharpe_vol) * 1.3
         cml_x = np.linspace(0, cml_x_max, 100)
@@ -317,38 +755,38 @@ def plot_efficient_frontier(
             name=f"Risk-Free ({risk_free*100:.1f}%)",
         ))
 
+    # Optimal portfolio markers
     fig.add_trace(go.Scatter(
         x=[sharpe_vol * 100], y=[sharpe_ret * 100], mode="markers",
         marker=dict(size=16, color=COLORS["sharpe"], symbol="star",
-                    line=dict(width=1, color="white")),
+                    line=dict(width=1.5, color="white")),
         name="Max Sharpe",
         hovertemplate=f"Max Sharpe<br>Vol: {sharpe_vol*100:.2f}%<br>Ret: {sharpe_ret*100:.2f}%<extra></extra>",
     ))
-
     fig.add_trace(go.Scatter(
         x=[minvar_vol * 100], y=[minvar_ret * 100], mode="markers",
         marker=dict(size=16, color=COLORS["min_var"], symbol="diamond",
-                    line=dict(width=1, color="white")),
+                    line=dict(width=1.5, color="white")),
         name="Min Variance",
         hovertemplate=f"Min Variance<br>Vol: {minvar_vol*100:.2f}%<br>Ret: {minvar_ret*100:.2f}%<extra></extra>",
     ))
-
     if show_rp:
         fig.add_trace(go.Scatter(
             x=[rp_vol * 100], y=[rp_ret * 100], mode="markers",
             marker=dict(size=16, color=COLORS["risk_parity"], symbol="hexagon",
-                        line=dict(width=1, color="white")),
+                        line=dict(width=1.5, color="white")),
             name="Risk Parity",
             hovertemplate=f"Risk Parity<br>Vol: {rp_vol*100:.2f}%<br>Ret: {rp_ret*100:.2f}%<extra></extra>",
         ))
 
+    # Individual assets
     fig.add_trace(go.Scatter(
         x=asset_vols * 100, y=asset_rets * 100,
         mode="markers+text",
         marker=dict(size=10, color=COLORS["assets"],
-                    line=dict(width=1, color="white")),
+                    line=dict(width=1, color="rgba(255,255,255,0.3)")),
         text=tickers, textposition="top center",
-        textfont=dict(size=10, color="white"),
+        textfont=dict(size=10, color="rgba(232,232,232,0.7)", family="JetBrains Mono"),
         name="Individual Assets",
         hovertemplate="%{text}<br>Vol: %{x:.1f}%<br>Ret: %{y:.1f}%<extra></extra>",
     ))
@@ -359,8 +797,9 @@ def plot_efficient_frontier(
         xaxis_title="Annualized Volatility (%)",
         yaxis_title="Annualized Return (%)",
         legend=dict(orientation="h", yanchor="bottom", y=-0.25,
-                    xanchor="center", x=0.5, font=dict(size=11)),
-        height=550,
+                    xanchor="center", x=0.5,
+                    font=dict(size=11, family="DM Sans")),
+        height=580,
     )
     return fig
 
@@ -368,10 +807,13 @@ def plot_efficient_frontier(
 def plot_correlation_heatmap(corr_matrix, tickers):
     fig = go.Figure(data=go.Heatmap(
         z=corr_matrix.values, x=tickers, y=tickers,
-        colorscale="RdBu_r", zmid=0, zmin=-1, zmax=1,
+        colorscale=[[0, "#0d0d0d"], [0.25, "#1a1a1a"], [0.5, "#333333"],
+                     [0.75, "#1abc9c"], [1, "#2ecc71"]],
+        zmid=0, zmin=-1, zmax=1,
         text=np.round(corr_matrix.values, 2),
-        texttemplate="%{text}", textfont=dict(size=11),
-        colorbar=dict(thickness=12, len=0.8),
+        texttemplate="%{text}", textfont=dict(size=11, family="JetBrains Mono"),
+        colorbar=dict(thickness=10, len=0.8,
+                      tickfont=dict(family="JetBrains Mono", size=9)),
     ))
     fig.update_layout(**PLOT_LAYOUT, title="Return Correlation Matrix", height=450)
     fig.update_xaxes(side="bottom", tickangle=-45)
@@ -382,12 +824,14 @@ def plot_weights_pie(weights, tickers, title):
     mask = weights > 0.005
     filtered_weights = weights[mask]
     filtered_tickers = [t for t, m in zip(tickers, mask) if m]
+
     fig = go.Figure(data=go.Pie(
         labels=filtered_tickers,
         values=np.round(filtered_weights * 100, 2),
-        hole=0.45, textinfo="label+percent", textfont=dict(size=12),
-        marker=dict(colors=px.colors.qualitative.Set2[:len(filtered_tickers)],
-                    line=dict(color="rgba(0,0,0,0.3)", width=1)),
+        hole=0.5, textinfo="label+percent",
+        textfont=dict(size=11, family="JetBrains Mono"),
+        marker=dict(colors=EMERALD_PALETTE[:len(filtered_tickers)],
+                    line=dict(color="rgba(10,10,10,0.8)", width=2)),
     ))
     fig.update_layout(**PLOT_LAYOUT, title=title, height=380, showlegend=False)
     return fig
@@ -396,7 +840,7 @@ def plot_weights_pie(weights, tickers, title):
 def plot_cumulative_returns(prices, tickers):
     normalized = (prices / prices.iloc[0]) * 100
     fig = go.Figure()
-    colors = px.colors.qualitative.Set2
+    colors = EMERALD_PALETTE
     for i, ticker in enumerate(tickers):
         fig.add_trace(go.Scatter(
             x=normalized.index, y=normalized[ticker], mode="lines",
@@ -405,14 +849,15 @@ def plot_cumulative_returns(prices, tickers):
     fig.update_layout(
         **PLOT_LAYOUT, title="Cumulative Returns (Normalized to 100)",
         xaxis_title="Date", yaxis_title="Value", height=400,
-        legend=dict(orientation="h", yanchor="bottom", y=-0.3, xanchor="center", x=0.5),
+        legend=dict(orientation="h", yanchor="bottom", y=-0.3,
+                    xanchor="center", x=0.5, font=dict(family="DM Sans")),
     )
     return fig
 
 
 def plot_drawdown(prices, tickers):
     fig = go.Figure()
-    colors = px.colors.qualitative.Set2
+    colors = EMERALD_PALETTE
     for i, ticker in enumerate(tickers):
         series = prices[ticker]
         running_max = series.cummax()
@@ -425,7 +870,8 @@ def plot_drawdown(prices, tickers):
     fig.update_layout(
         **PLOT_LAYOUT, title="Drawdown Analysis",
         xaxis_title="Date", yaxis_title="Drawdown (%)", height=350,
-        legend=dict(orientation="h", yanchor="bottom", y=-0.3, xanchor="center", x=0.5),
+        legend=dict(orientation="h", yanchor="bottom", y=-0.3,
+                    xanchor="center", x=0.5, font=dict(family="DM Sans")),
     )
     return fig
 
@@ -455,11 +901,12 @@ def plot_backtest(prices, sharpe_w, minvar_w, rp_w, tickers, show_rp):
         x=equal_curve.index, y=equal_curve.values, mode="lines",
         name="Equal Weight", line=dict(width=2, color=COLORS["equal_weight"], dash="dot"),
     ))
+
     fig.update_layout(
         **PLOT_LAYOUT, title="Portfolio Backtest (Normalized to 100)",
         xaxis_title="Date", yaxis_title="Portfolio Value", height=450,
         legend=dict(orientation="h", yanchor="bottom", y=-0.25,
-                    xanchor="center", x=0.5, font=dict(size=11)),
+                    xanchor="center", x=0.5, font=dict(size=11, family="DM Sans")),
     )
     return fig, sharpe_curve, minvar_curve, rp_curve, equal_curve
 
@@ -479,14 +926,15 @@ def plot_return_distribution(daily_returns, weights, title, color):
     normal_pdf = norm.pdf(x_range, mu, sigma)
     fig.add_trace(go.Scatter(
         x=x_range * 100, y=normal_pdf / 100,
-        mode="lines", line=dict(color="white", width=2, dash="dash"),
+        mode="lines", line=dict(color="rgba(232,232,232,0.6)", width=2, dash="dash"),
         name="Normal Fit",
     ))
     fig.update_layout(
         **PLOT_LAYOUT, title=title,
         xaxis_title="Daily Return (%)", yaxis_title="Density", height=380,
         showlegend=True,
-        legend=dict(orientation="h", yanchor="bottom", y=-0.3, xanchor="center", x=0.5),
+        legend=dict(orientation="h", yanchor="bottom", y=-0.3,
+                    xanchor="center", x=0.5, font=dict(family="DM Sans")),
     )
     return fig
 
@@ -496,11 +944,13 @@ def plot_risk_contributions(weights, cov_matrix, tickers, title):
     mask = rc > 0.5
     filtered_rc = rc[mask]
     filtered_tickers = [t for t, m in zip(tickers, mask) if m]
+
     fig = go.Figure(data=go.Bar(
         x=filtered_tickers, y=filtered_rc,
-        marker_color=px.colors.qualitative.Set2[:len(filtered_tickers)],
+        marker_color=EMERALD_PALETTE[:len(filtered_tickers)],
         text=[f"{v:.1f}%" for v in filtered_rc],
-        textposition="outside", textfont=dict(size=11),
+        textposition="outside",
+        textfont=dict(size=11, family="JetBrains Mono"),
     ))
     fig.update_layout(
         **PLOT_LAYOUT, title=title,
@@ -511,7 +961,7 @@ def plot_risk_contributions(weights, cov_matrix, tickers, title):
 
 def plot_rolling_volatility(daily_returns, tickers, window=30):
     fig = go.Figure()
-    colors = px.colors.qualitative.Set2
+    colors = EMERALD_PALETTE
     for i, ticker in enumerate(tickers):
         rolling_vol = daily_returns[ticker].rolling(window).std() * np.sqrt(TRADING_DAYS) * 100
         fig.add_trace(go.Scatter(
@@ -521,14 +971,15 @@ def plot_rolling_volatility(daily_returns, tickers, window=30):
     fig.update_layout(
         **PLOT_LAYOUT, title=f"Rolling {window}-Day Annualized Volatility (%)",
         xaxis_title="Date", yaxis_title="Volatility (%)", height=400,
-        legend=dict(orientation="h", yanchor="bottom", y=-0.3, xanchor="center", x=0.5),
+        legend=dict(orientation="h", yanchor="bottom", y=-0.3,
+                    xanchor="center", x=0.5, font=dict(family="DM Sans")),
     )
     return fig
 
 
 def plot_rolling_correlation(daily_returns, tickers, window=60):
     fig = go.Figure()
-    colors = px.colors.qualitative.Plotly
+    colors = EMERALD_PALETTE
     color_idx = 0
     for i in range(len(tickers)):
         for j in range(i + 1, len(tickers)):
@@ -542,7 +993,8 @@ def plot_rolling_correlation(daily_returns, tickers, window=60):
     fig.update_layout(
         **PLOT_LAYOUT, title=f"Rolling {window}-Day Pairwise Correlation",
         xaxis_title="Date", yaxis_title="Correlation", height=400,
-        legend=dict(orientation="h", yanchor="bottom", y=-0.35, xanchor="center", x=0.5),
+        legend=dict(orientation="h", yanchor="bottom", y=-0.35,
+                    xanchor="center", x=0.5, font=dict(family="DM Sans")),
     )
     return fig
 
@@ -594,7 +1046,6 @@ n_simulations = st.sidebar.select_slider(
 
 # Display options
 st.sidebar.markdown("### Display Options")
-
 show_risk_parity = st.sidebar.checkbox("Risk Parity portfolio", value=True)
 show_cml = st.sidebar.checkbox("Capital Market Line", value=True)
 show_var = st.sidebar.checkbox("VaR / CVaR metrics", value=True)
@@ -603,7 +1054,6 @@ show_distributions = st.sidebar.checkbox("Return distributions", value=False)
 show_risk_contrib = st.sidebar.checkbox("Risk contribution breakdown", value=False)
 show_rolling = st.sidebar.checkbox("Rolling volatility / correlation", value=False)
 
-# Conditional parameters
 if show_var:
     var_confidence = st.sidebar.slider(
         "VaR confidence level (%)", min_value=90.0, max_value=99.9, value=95.0, step=0.5,
@@ -621,18 +1071,28 @@ else:
 
 run_button = st.sidebar.button("Optimize", use_container_width=True, type="primary")
 
-
 # ──────────────────────────────────────────────────────────────
-# HEADER
+# ANIMATED HEADER WITH FROG LOGO
 # ──────────────────────────────────────────────────────────────
 
-st.markdown("# QuantFolio")
-st.markdown(
-    "Mean-variance optimization, efficient frontier construction, "
-    "and Monte Carlo simulation for multi-asset portfolios."
-)
-st.markdown("---")
-
+st.markdown("""
+<div class="qf-header">
+    <div class="qf-header-content">
+        <img src="https://marinxhemollari.com/frog-logo.svg"
+             alt="QuantFolio" class="qf-logo"
+             onerror="this.style.display='none'">
+        <div>
+            <div class="qf-title">
+                Quant<span>Folio</span>
+                <span class="qf-version">v2.0</span>
+            </div>
+            <div class="qf-subtitle">
+                Mean-variance optimization · Efficient frontier construction · Monte Carlo simulation
+            </div>
+        </div>
+    </div>
+</div>
+""", unsafe_allow_html=True)
 
 # ──────────────────────────────────────────────────────────────
 # MAIN
@@ -643,7 +1103,6 @@ if not selected_tickers or len(selected_tickers) < 2:
     st.stop()
 
 if run_button or "results" in st.session_state:
-
     with st.spinner("Fetching price data..."):
         prices = fetch_price_data(selected_tickers, str(start_date), str(end_date))
 
@@ -655,8 +1114,8 @@ if run_button or "results" in st.session_state:
     if len(valid_tickers) < 2:
         st.error("At least 2 tickers must have valid data for the selected date range.")
         st.stop()
-    prices = prices[valid_tickers]
 
+    prices = prices[valid_tickers]
     daily_returns = np.log(prices / prices.shift(1)).dropna()
     mean_returns = daily_returns.mean() * TRADING_DAYS
     cov_matrix = daily_returns.cov() * TRADING_DAYS
@@ -700,13 +1159,13 @@ if run_button or "results" in st.session_state:
 
     asset_vols = np.sqrt(np.diag(cov_matrix.values))
     asset_rets = mean_returns.values
-
     st.session_state["results"] = True
 
     # ══════════════════════════════════════════════════════════
     # RESULTS
     # ══════════════════════════════════════════════════════════
 
+    st.markdown('<div class="qf-fade-in">', unsafe_allow_html=True)
     st.markdown("## Optimal Portfolios")
 
     if show_risk_parity:
@@ -716,7 +1175,8 @@ if run_button or "results" in st.session_state:
         col3 = None
 
     with col1:
-        st.markdown("#### Max Sharpe Ratio")
+        st.markdown('<div class="qf-strategy-label qf-strategy-sharpe">MAX SHARPE RATIO</div>',
+                    unsafe_allow_html=True)
         m1, m2 = st.columns(2)
         m1.metric("Return", f"{sharpe_ret * 100:.1f}%")
         m2.metric("Volatility", f"{sharpe_vol * 100:.1f}%")
@@ -726,7 +1186,8 @@ if run_button or "results" in st.session_state:
             m4.metric(f"CVaR {var_confidence*100:.0f}%", f"{sharpe_cvar*100:.2f}%")
 
     with col2:
-        st.markdown("#### Minimum Variance")
+        st.markdown('<div class="qf-strategy-label qf-strategy-minvar">MINIMUM VARIANCE</div>',
+                    unsafe_allow_html=True)
         m5, m6 = st.columns(2)
         m5.metric("Return", f"{minvar_ret * 100:.1f}%")
         m6.metric("Volatility", f"{minvar_vol * 100:.1f}%")
@@ -737,7 +1198,8 @@ if run_button or "results" in st.session_state:
 
     if show_risk_parity and col3 is not None:
         with col3:
-            st.markdown("#### Risk Parity")
+            st.markdown('<div class="qf-strategy-label qf-strategy-rp">RISK PARITY</div>',
+                        unsafe_allow_html=True)
             m9, m10 = st.columns(2)
             m9.metric("Return", f"{rp_ret * 100:.1f}%")
             m10.metric("Volatility", f"{rp_vol * 100:.1f}%")
@@ -746,6 +1208,7 @@ if run_button or "results" in st.session_state:
             if show_var:
                 m12.metric(f"CVaR {var_confidence*100:.0f}%", f"{rp_cvar*100:.2f}%")
 
+    st.markdown('</div>', unsafe_allow_html=True)
     st.markdown("---")
 
     # Efficient Frontier
@@ -819,6 +1282,7 @@ if run_button or "results" in st.session_state:
     filter_mask = (weight_df["Max Sharpe (%)"] > 0.5) | (weight_df["Min Variance (%)"] > 0.5)
     if show_risk_parity:
         filter_mask = filter_mask | (weight_df["Risk Parity (%)"] > 0.5)
+
     st.dataframe(weight_df[filter_mask], use_container_width=True)
 
     csv_buffer = io.StringIO()
@@ -837,6 +1301,7 @@ if run_button or "results" in st.session_state:
         st.markdown("## Backtest")
         bt_fig, sharpe_curve, minvar_curve, rp_curve, equal_curve = plot_backtest(
             prices, sharpe_weights, minvar_weights, rp_weights, valid_tickers, show_risk_parity)
+
         st.plotly_chart(bt_fig, use_container_width=True)
 
         bt_data = {
@@ -862,24 +1327,23 @@ if run_button or "results" in st.session_state:
         with dc1:
             st.plotly_chart(
                 plot_return_distribution(daily_returns, sharpe_weights,
-                                         "Max Sharpe Returns", COLORS["sharpe"]),
+                                        "Max Sharpe Returns", COLORS["sharpe"]),
                 use_container_width=True)
         with dc2:
             st.plotly_chart(
                 plot_return_distribution(daily_returns, minvar_weights,
-                                         "Min Variance Returns", COLORS["min_var"]),
+                                        "Min Variance Returns", COLORS["min_var"]),
                 use_container_width=True)
         if show_risk_parity and dc3 is not None:
             with dc3:
                 st.plotly_chart(
                     plot_return_distribution(daily_returns, rp_weights,
-                                             "Risk Parity Returns", COLORS["risk_parity"]),
+                                            "Risk Parity Returns", COLORS["risk_parity"]),
                     use_container_width=True)
         st.markdown("---")
 
     # Analysis tabs
     st.markdown("## Analysis")
-
     tab_names = ["Cumulative Returns", "Drawdown", "Correlation"]
     if show_rolling:
         tab_names.extend(["Rolling Volatility", "Rolling Correlation"])
@@ -946,18 +1410,16 @@ if run_button or "results" in st.session_state:
     info_col2.metric("Start", prices.index[0].strftime('%Y-%m-%d'))
     info_col3.metric("End", prices.index[-1].strftime('%Y-%m-%d'))
 
-
 # ──────────────────────────────────────────────────────────────
 # FOOTER
 # ──────────────────────────────────────────────────────────────
 
 st.markdown("---")
-st.markdown(
-    "<div style='text-align: center; color: rgba(255,255,255,0.3); font-size: 0.85rem;'>"
-    "Built by <a href='https://marinxhemollari.com' target='_blank' "
-    "style='color: rgba(255,255,255,0.5);'>Marin Xhemollari</a> · "
-    "Markowitz Mean-Variance Optimization · "
-    "Market data via Yahoo Finance"
-    "</div>",
-    unsafe_allow_html=True,
-)
+st.markdown("""
+<div class="qf-footer">
+    Built by <a href="https://marinxhemollari.com" target="_blank">Marin Xhemollari</a> ·
+    Markowitz Mean-Variance Optimization ·
+    Market data via Yahoo Finance
+    <div class="qf-footer-mono">quantfolio v2.0 · scipy.optimize.SLSQP · plotly.js</div>
+</div>
+""", unsafe_allow_html=True)
