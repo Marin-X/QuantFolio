@@ -2,7 +2,7 @@
 
 Quantitative portfolio optimization engine built with Python and Streamlit. Implements mean-variance optimization (Markowitz, 1952) with interactive controls for efficient frontier construction, risk parity allocation, Monte Carlo simulation, backtesting, and risk analysis across stocks, ETFs, and cryptocurrencies.
 
-**[Live Demo →](https://quantfolio-mx.streamlit.app)**
+**[Live Demo →](https://quantfolio-ebcqckziaxahnvt7jzphl.streamlit.app)**
 
 ---
 
