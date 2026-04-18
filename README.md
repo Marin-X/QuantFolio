@@ -16,6 +16,8 @@ Quantitative portfolio optimization engine built with Python and Streamlit. Impl
 
 ![Backtest](backtest.png)
 
+![Summary](summary.png)
+
 ---
 
 ## Features
@@ -50,5 +52,6 @@ Quantitative portfolio optimization engine built with Python and Streamlit. Impl
 ### Mean-Variance Optimization
 
 Given *n* assets with expected return vector **μ** and covariance matrix **Σ**, the portfolio return and variance are:
+
 R_p = w^T · μ
 σ²_p = w^T · Σ · w
