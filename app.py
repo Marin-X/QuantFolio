@@ -1,6 +1,8 @@
 """
-QuantFolio — Quantitative Portfolio Optimization Engine
+QuantFolio — Quantitative Portfolio Optimization & Factor Analysis Engine
 Built by Marin Xhemollari | marinxhemollari.com
+
+v3.0 — Adds Fama-French factor regression and market regime analysis.
 
 Implements:
 - Mean-Variance Optimization (Markowitz, 1952)
@@ -12,6 +14,9 @@ Implements:
 - Return distribution analysis with normal overlay
 - Rolling volatility and correlation analysis
 - Risk contribution decomposition
+- Fama-French 3-factor and 5-factor regression (NEW)
+- Market regime detection (bull / bear / high-vol) (NEW)
+- Regime-conditional portfolio performance (NEW)
 - CSV export of optimal weights
 """
 
@@ -26,6 +31,8 @@ from scipy.stats import norm
 from datetime import datetime, timedelta
 import warnings
 import io
+import urllib.request
+import zipfile
 
 warnings.filterwarnings("ignore")
 
@@ -37,15 +44,13 @@ st.set_page_config(
 )
 
 # ──────────────────────────────────────────────────────────────
-# PREMIUM CSS — Charcoal / Emerald Theme
+# CSS — Charcoal / Emerald Theme
 # ──────────────────────────────────────────────────────────────
 
 st.markdown("""
 <style>
-/* ═══════ FONT IMPORTS ═══════ */
 @import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;500;600;700&family=DM+Sans:wght@300;400;500;600;700&family=JetBrains+Mono:wght@300;400;500;600&display=swap');
 
-/* ═══════ ROOT VARIABLES ═══════ */
 :root {
     --charcoal-900: #0a0a0a;
     --charcoal-800: #0d0d0d;
@@ -57,8 +62,6 @@ st.markdown("""
     --emerald-500: #2ecc71;
     --emerald-400: #27ae60;
     --emerald-300: #1abc9c;
-    --emerald-glow: rgba(46, 204, 113, 0.15);
-    --emerald-glow-strong: rgba(46, 204, 113, 0.35);
     --text-primary: #e8e8e8;
     --text-secondary: rgba(232, 232, 232, 0.6);
     --text-muted: rgba(232, 232, 232, 0.35);
@@ -106,10 +109,8 @@ html, body, [data-testid="stAppViewContainer"] {
 
 .qf-header {
     background: linear-gradient(135deg,
-        var(--charcoal-800) 0%,
-        rgba(46, 204, 113, 0.06) 25%,
-        var(--charcoal-700) 50%,
-        rgba(26, 188, 156, 0.06) 75%,
+        var(--charcoal-800) 0%, rgba(46, 204, 113, 0.06) 25%,
+        var(--charcoal-700) 50%, rgba(26, 188, 156, 0.06) 75%,
         var(--charcoal-800) 100%);
     background-size: 400% 400%;
     animation: gradientShift 12s ease infinite, fadeInUp 0.8s ease-out;
@@ -117,49 +118,30 @@ html, body, [data-testid="stAppViewContainer"] {
     border-radius: 16px;
     padding: 2.5rem 3rem;
     margin-bottom: 2rem;
-    position: relative;
-    overflow: hidden;
+    position: relative; overflow: hidden;
 }
 .qf-header::before {
     content: '';
-    position: absolute;
-    top: 0; left: 0; right: 0; bottom: 0;
-    background: radial-gradient(ellipse at 20% 50%,
-        rgba(46, 204, 113, 0.04) 0%, transparent 70%);
+    position: absolute; top: 0; left: 0; right: 0; bottom: 0;
+    background: radial-gradient(ellipse at 20% 50%, rgba(46, 204, 113, 0.04) 0%, transparent 70%);
     pointer-events: none;
 }
 .qf-header-content {
-    display: flex;
-    align-items: center;
-    gap: 2.5rem;
-    position: relative;
-    z-index: 1;
-    min-width: 0;
+    display: flex; align-items: center; gap: 2.5rem;
+    position: relative; z-index: 1; min-width: 0;
 }
 .qf-logo {
-    width: 64px;
-    height: 64px;
+    width: 64px; height: 64px;
     animation: logoFloat 4s ease-in-out infinite;
     filter: drop-shadow(0 0 8px rgba(46, 204, 113, 0.25));
     flex-shrink: 0;
 }
-.qf-title-wrap {
-    display: flex;
-    flex-direction: column;
-    min-width: 0;
-    flex: 1;
-}
+.qf-title-wrap { display: flex; flex-direction: column; min-width: 0; flex: 1; }
 .qf-title {
     font-family: 'Cormorant Garamond', serif;
-    font-size: 3rem;
-    font-weight: 700;
-    letter-spacing: -0.02em;
-    line-height: 1.1;
-    margin: 0;
-    display: flex;
-    align-items: baseline;
-    flex-wrap: wrap;
-    gap: 0.25rem;
+    font-size: 3rem; font-weight: 700;
+    letter-spacing: -0.02em; line-height: 1.1; margin: 0;
+    display: flex; align-items: baseline; flex-wrap: wrap; gap: 0.25rem;
 }
 .qf-title-plain { color: var(--text-primary); }
 .qf-title-accent {
@@ -171,27 +153,20 @@ html, body, [data-testid="stAppViewContainer"] {
 }
 .qf-subtitle {
     font-family: 'DM Sans', sans-serif;
-    font-size: 0.95rem;
-    color: var(--text-secondary);
-    margin-top: 0.35rem;
-    font-weight: 300;
-    letter-spacing: 0.02em;
+    font-size: 0.95rem; color: var(--text-secondary);
+    margin-top: 0.35rem; font-weight: 300; letter-spacing: 0.02em;
 }
 .qf-version {
     font-family: 'JetBrains Mono', monospace;
-    font-size: 0.7rem;
-    color: var(--emerald-500);
+    font-size: 0.7rem; color: var(--emerald-500);
     background: rgba(46, 204, 113, 0.08);
     border: 1px solid rgba(46, 204, 113, 0.15);
-    padding: 0.2rem 0.6rem;
-    border-radius: 4px;
+    padding: 0.2rem 0.6rem; border-radius: 4px;
     letter-spacing: 0.05em;
-    align-self: center;
-    flex-shrink: 0;
-    margin-left: 0.75rem;
+    align-self: center; flex-shrink: 0; margin-left: 0.75rem;
 }
 
-h2, .qf-section-title {
+h2 {
     font-family: 'Cormorant Garamond', serif !important;
     font-weight: 600 !important;
     color: var(--text-primary) !important;
@@ -207,7 +182,6 @@ h3, h4 {
 div[data-testid="stMetric"] {
     background: var(--glass-bg) !important;
     backdrop-filter: blur(16px);
-    -webkit-backdrop-filter: blur(16px);
     border: 1px solid var(--glass-border) !important;
     border-radius: 12px !important;
     padding: 1.2rem 1.4rem !important;
@@ -218,24 +192,19 @@ div[data-testid="stMetric"]:hover {
     border-color: var(--glass-border-hover) !important;
     background: rgba(20, 20, 20, 0.8) !important;
     transform: translateY(-2px);
-    box-shadow: 0 8px 32px rgba(46, 204, 113, 0.1),
-                0 0 0 1px rgba(46, 204, 113, 0.15);
+    box-shadow: 0 8px 32px rgba(46, 204, 113, 0.1);
 }
 div[data-testid="stMetric"] label {
     font-family: 'DM Sans', sans-serif !important;
-    font-size: 0.72rem !important;
-    font-weight: 500 !important;
+    font-size: 0.72rem !important; font-weight: 500 !important;
     color: var(--text-muted) !important;
-    text-transform: uppercase !important;
-    letter-spacing: 0.08em !important;
+    text-transform: uppercase !important; letter-spacing: 0.08em !important;
 }
 div[data-testid="stMetric"] [data-testid="stMetricValue"] {
     font-family: 'JetBrains Mono', monospace !important;
-    font-size: 1.4rem !important;
-    font-weight: 600 !important;
+    font-size: 1.4rem !important; font-weight: 600 !important;
     color: var(--emerald-500) !important;
-    white-space: nowrap !important;
-    overflow: visible !important;
+    white-space: nowrap !important; overflow: visible !important;
 }
 
 section[data-testid="stSidebar"] {
@@ -245,12 +214,9 @@ section[data-testid="stSidebar"] {
 section[data-testid="stSidebar"] .stMarkdown h2,
 section[data-testid="stSidebar"] .stMarkdown h3 {
     font-family: 'DM Sans', sans-serif !important;
-    font-weight: 600 !important;
-    font-size: 0.85rem !important;
-    text-transform: uppercase !important;
-    letter-spacing: 0.1em !important;
-    color: var(--text-muted) !important;
-    margin-top: 1.5rem !important;
+    font-weight: 600 !important; font-size: 0.85rem !important;
+    text-transform: uppercase !important; letter-spacing: 0.1em !important;
+    color: var(--text-muted) !important; margin-top: 1.5rem !important;
 }
 section[data-testid="stSidebar"] .stRadio label,
 section[data-testid="stSidebar"] .stMultiSelect label,
@@ -269,12 +235,9 @@ section[data-testid="stSidebar"] .stDateInput label {
     background: linear-gradient(135deg, var(--emerald-400), var(--emerald-300)) !important;
     color: var(--charcoal-900) !important;
     font-family: 'DM Sans', sans-serif !important;
-    font-weight: 600 !important;
-    font-size: 0.85rem !important;
-    letter-spacing: 0.06em !important;
-    text-transform: uppercase !important;
-    border: none !important;
-    border-radius: 8px !important;
+    font-weight: 600 !important; font-size: 0.85rem !important;
+    letter-spacing: 0.06em !important; text-transform: uppercase !important;
+    border: none !important; border-radius: 8px !important;
     padding: 0.6rem 1.5rem !important;
     transition: all 0.3s ease !important;
     box-shadow: 0 4px 16px rgba(46, 204, 113, 0.2) !important;
@@ -299,96 +262,77 @@ section[data-testid="stSidebar"] .stDateInput label {
 }
 
 .stTabs [data-baseweb="tab-list"] {
-    gap: 4px !important;
-    background: var(--charcoal-700) !important;
-    border-radius: 10px !important;
-    padding: 4px !important;
+    gap: 4px !important; background: var(--charcoal-700) !important;
+    border-radius: 10px !important; padding: 4px !important;
     border: 1px solid rgba(255,255,255,0.04);
 }
 .stTabs [data-baseweb="tab"] {
     font-family: 'DM Sans', sans-serif !important;
-    font-size: 0.82rem !important;
-    font-weight: 500 !important;
-    border-radius: 8px !important;
-    padding: 8px 16px !important;
+    font-size: 0.82rem !important; font-weight: 500 !important;
+    border-radius: 8px !important; padding: 8px 16px !important;
     color: var(--text-secondary) !important;
-    transition: all 0.25s ease !important;
 }
 .stTabs [aria-selected="true"] {
     background: rgba(46, 204, 113, 0.1) !important;
     color: var(--emerald-500) !important;
-    border-bottom-color: transparent !important;
 }
 
 [data-testid="stDataFrame"] {
     border: 1px solid var(--glass-border) !important;
-    border-radius: 10px !important;
-    overflow: hidden;
+    border-radius: 10px !important; overflow: hidden;
     animation: fadeIn 0.5s ease-out;
 }
 
 hr {
-    border: none !important;
-    height: 1px !important;
-    background: linear-gradient(90deg,
-        transparent,
-        rgba(46, 204, 113, 0.15),
-        transparent) !important;
+    border: none !important; height: 1px !important;
+    background: linear-gradient(90deg, transparent, rgba(46, 204, 113, 0.15), transparent) !important;
     margin: 2rem 0 !important;
 }
 
 .qf-strategy-label {
     font-family: 'DM Sans', sans-serif;
-    font-size: 0.65rem;
-    font-weight: 600;
-    text-transform: uppercase;
-    letter-spacing: 0.12em;
-    padding: 0.25rem 0.65rem;
-    border-radius: 4px;
-    display: inline-block;
-    margin-bottom: 0.5rem;
+    font-size: 0.65rem; font-weight: 600;
+    text-transform: uppercase; letter-spacing: 0.12em;
+    padding: 0.25rem 0.65rem; border-radius: 4px;
+    display: inline-block; margin-bottom: 0.5rem;
 }
 .qf-strategy-sharpe { color: #22c55e; background: rgba(34, 197, 94, 0.08); border: 1px solid rgba(34, 197, 94, 0.2); }
 .qf-strategy-minvar { color: #f59e0b; background: rgba(245, 158, 11, 0.08); border: 1px solid rgba(245, 158, 11, 0.2); }
 .qf-strategy-rp { color: #ec4899; background: rgba(236, 72, 153, 0.08); border: 1px solid rgba(236, 72, 153, 0.2); }
 
-.stSpinner > div { border-top-color: var(--emerald-500) !important; }
-
-.qf-fade-in { animation: fadeInUp 0.6s ease-out; }
+.qf-regime-label {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.7rem; font-weight: 500;
+    padding: 0.2rem 0.5rem; border-radius: 4px;
+    display: inline-block;
+}
+.qf-regime-bull { color: #22c55e; background: rgba(34,197,94,0.1); border: 1px solid rgba(34,197,94,0.25); }
+.qf-regime-bear { color: #ef4444; background: rgba(239,68,68,0.1); border: 1px solid rgba(239,68,68,0.25); }
+.qf-regime-highvol { color: #f59e0b; background: rgba(245,158,11,0.1); border: 1px solid rgba(245,158,11,0.25); }
 
 blockquote {
     border-left: 3px solid var(--emerald-500) !important;
     background: rgba(46, 204, 113, 0.03) !important;
-    padding: 0.8rem 1.2rem !important;
-    border-radius: 0 8px 8px 0 !important;
-    font-family: 'DM Sans', sans-serif !important;
-    font-size: 0.88rem !important;
+    padding: 0.8rem 1.2rem !important; border-radius: 0 8px 8px 0 !important;
+    font-family: 'DM Sans', sans-serif !important; font-size: 0.88rem !important;
     color: var(--text-secondary) !important;
 }
 
 .qf-footer {
-    text-align: center;
-    color: var(--text-muted);
-    font-family: 'DM Sans', sans-serif;
-    font-size: 0.78rem;
-    padding: 2rem 0 1rem;
-    animation: fadeIn 0.8s ease-out;
+    text-align: center; color: var(--text-muted);
+    font-family: 'DM Sans', sans-serif; font-size: 0.78rem;
+    padding: 2rem 0 1rem; animation: fadeIn 0.8s ease-out;
 }
-.qf-footer a { color: var(--emerald-500); text-decoration: none; transition: color 0.2s ease; }
+.qf-footer a { color: var(--emerald-500); text-decoration: none; }
 .qf-footer a:hover { color: var(--emerald-300); }
 .qf-footer-mono {
-    font-family: 'JetBrains Mono', monospace;
-    font-size: 0.68rem;
-    color: var(--text-muted);
-    opacity: 0.6;
-    margin-top: 0.5rem;
+    font-family: 'JetBrains Mono', monospace; font-size: 0.68rem;
+    color: var(--text-muted); opacity: 0.6; margin-top: 0.5rem;
 }
 
 [data-testid="stPlotlyChart"] {
-    border: 1px solid var(--glass-border);
-    border-radius: 12px;
-    overflow: hidden;
-    animation: fadeIn 0.5s ease-out;
+    border: 1px solid var(--glass-border); border-radius: 12px;
+    overflow: hidden; animation: fadeIn 0.5s ease-out;
     transition: border-color 0.3s ease, box-shadow 0.3s ease;
 }
 [data-testid="stPlotlyChart"]:hover {
@@ -440,6 +384,11 @@ POPULAR_CRYPTO = [
     "DOT-USD", "LINK-USD", "MATIC-USD", "ATOM-USD",
 ]
 
+# Ken French data library — Fama-French factor URLs
+FF3_URL = "https://mba.tuck.dartmouth.edu/pages/faculty/ken.french/ftp/F-F_Research_Data_Factors_daily_CSV.zip"
+FF5_URL = "https://mba.tuck.dartmouth.edu/pages/faculty/ken.french/ftp/F-F_Research_Data_5_Factors_2x3_daily_CSV.zip"
+MOM_URL = "https://mba.tuck.dartmouth.edu/pages/faculty/ken.french/ftp/F-F_Momentum_Factor_daily_CSV.zip"
+
 # ──────────────────────────────────────────────────────────────
 # PORTFOLIO MATH
 # ──────────────────────────────────────────────────────────────
@@ -464,19 +413,14 @@ def find_optimal_portfolio(mean_returns, cov_matrix, risk_free_rate, objective="
     initial_weights = np.ones(n_assets) / n_assets
     bounds = tuple((0.0, 1.0) for _ in range(n_assets))
     constraints = {"type": "eq", "fun": lambda w: np.sum(w) - 1.0}
-
     if objective == "sharpe":
-        result = minimize(
-            neg_sharpe_ratio, initial_weights,
-            args=(mean_returns, cov_matrix, risk_free_rate),
-            method="SLSQP", bounds=bounds, constraints=constraints,
-        )
+        result = minimize(neg_sharpe_ratio, initial_weights,
+                          args=(mean_returns, cov_matrix, risk_free_rate),
+                          method="SLSQP", bounds=bounds, constraints=constraints)
     else:
-        result = minimize(
-            portfolio_volatility, initial_weights,
-            args=(mean_returns, cov_matrix),
-            method="SLSQP", bounds=bounds, constraints=constraints,
-        )
+        result = minimize(portfolio_volatility, initial_weights,
+                          args=(mean_returns, cov_matrix),
+                          method="SLSQP", bounds=bounds, constraints=constraints)
     return result.x
 
 
@@ -485,18 +429,14 @@ def find_risk_parity_portfolio(cov_matrix):
     initial_weights = np.ones(n_assets) / n_assets
     bounds = tuple((0.01, 1.0) for _ in range(n_assets))
     constraints = {"type": "eq", "fun": lambda w: np.sum(w) - 1.0}
-
     def risk_parity_objective(weights):
         port_vol = np.sqrt(weights @ cov_matrix @ weights)
         marginal_contrib = cov_matrix @ weights / port_vol
         risk_contrib = weights * marginal_contrib
         target = port_vol / n_assets
         return np.sum((risk_contrib - target) ** 2)
-
-    result = minimize(
-        risk_parity_objective, initial_weights,
-        method="SLSQP", bounds=bounds, constraints=constraints,
-    )
+    result = minimize(risk_parity_objective, initial_weights,
+                      method="SLSQP", bounds=bounds, constraints=constraints)
     return result.x
 
 
@@ -511,25 +451,20 @@ def compute_efficient_frontier(mean_returns, cov_matrix, risk_free_rate, n_point
     n_assets = len(mean_returns)
     bounds = tuple((0.0, 1.0) for _ in range(n_assets))
     initial_weights = np.ones(n_assets) / n_assets
-
     target_returns = np.linspace(mean_returns.min(), mean_returns.max(), n_points)
     frontier_volatilities = []
     frontier_returns = []
-
     for target in target_returns:
         constraints = [
             {"type": "eq", "fun": lambda w: np.sum(w) - 1.0},
             {"type": "eq", "fun": lambda w, t=target: np.dot(w, mean_returns) - t},
         ]
-        result = minimize(
-            portfolio_volatility, initial_weights,
-            args=(mean_returns, cov_matrix),
-            method="SLSQP", bounds=bounds, constraints=constraints,
-        )
+        result = minimize(portfolio_volatility, initial_weights,
+                          args=(mean_returns, cov_matrix),
+                          method="SLSQP", bounds=bounds, constraints=constraints)
         if result.success:
             frontier_volatilities.append(result.fun)
             frontier_returns.append(target)
-
     return np.array(frontier_volatilities), np.array(frontier_returns)
 
 
@@ -539,7 +474,6 @@ def run_monte_carlo(mean_returns, cov_matrix, risk_free_rate, n_simulations):
     results_vol = np.zeros(n_simulations)
     results_sharpe = np.zeros(n_simulations)
     results_weights = np.zeros((n_simulations, n_assets))
-
     for i in range(n_simulations):
         weights = np.random.dirichlet(np.ones(n_assets))
         ret, vol = calc_portfolio_performance(weights, mean_returns, cov_matrix)
@@ -547,7 +481,6 @@ def run_monte_carlo(mean_returns, cov_matrix, risk_free_rate, n_simulations):
         results_vol[i] = vol
         results_sharpe[i] = (ret - risk_free_rate) / vol
         results_weights[i] = weights
-
     return results_return, results_vol, results_sharpe, results_weights
 
 
@@ -589,6 +522,256 @@ def calc_backtest_stats(curve, risk_free):
 
 
 # ──────────────────────────────────────────────────────────────
+# FAMA-FRENCH FACTOR DATA & REGRESSION (v3.0)
+# ──────────────────────────────────────────────────────────────
+
+@st.cache_data(ttl=24 * 3600, show_spinner=False)
+def fetch_ff_factors(model="FF5"):
+    """
+    Fetch Fama-French factor data from Ken French's Data Library.
+    Returns daily factor returns as percentages (not decimals).
+    Columns depend on model: FF3 → Mkt-RF, SMB, HML, RF
+                             FF5 → Mkt-RF, SMB, HML, RMW, CMA, RF
+                             Adds MOM (momentum) if available.
+    """
+    try:
+        url = FF5_URL if model == "FF5" else FF3_URL
+        # Download zip
+        with urllib.request.urlopen(url, timeout=30) as response:
+            zip_data = response.read()
+        # Extract CSV
+        with zipfile.ZipFile(io.BytesIO(zip_data)) as z:
+            csv_name = z.namelist()[0]
+            with z.open(csv_name) as f:
+                raw = f.read().decode("utf-8", errors="ignore")
+
+        # Parse — French CSVs have preamble lines and annual data at the bottom
+        lines = raw.split("\n")
+        # Find the header line (first line starting with a digit-like token after whitespace)
+        start_idx = None
+        for i, line in enumerate(lines):
+            parts = [p.strip() for p in line.split(",")]
+            if len(parts) >= 4 and parts[0] and parts[0][0].isdigit() and len(parts[0]) >= 8:
+                start_idx = i
+                break
+        if start_idx is None:
+            return None
+        # Find header (last line before first data line where we see column names)
+        header_idx = start_idx - 1
+        while header_idx >= 0 and not lines[header_idx].strip():
+            header_idx -= 1
+
+        # Identify end — stop when we hit an empty line or annual data block
+        end_idx = start_idx
+        while end_idx < len(lines):
+            line = lines[end_idx].strip()
+            if not line:
+                break
+            parts = [p.strip() for p in line.split(",")]
+            if not (parts[0] and parts[0][0].isdigit() and len(parts[0]) >= 8):
+                break
+            end_idx += 1
+
+        # Build CSV for pandas
+        header_line = lines[header_idx]
+        data_lines = lines[start_idx:end_idx]
+        csv_text = header_line + "\n" + "\n".join(data_lines)
+
+        df = pd.read_csv(io.StringIO(csv_text))
+        # Rename date column (French uses blank or "Unnamed: 0")
+        date_col = df.columns[0]
+        df = df.rename(columns={date_col: "Date"})
+        df["Date"] = pd.to_datetime(df["Date"], format="%Y%m%d", errors="coerce")
+        df = df.dropna(subset=["Date"])
+        df = df.set_index("Date")
+        # Convert percentages from string to float
+        for col in df.columns:
+            df[col] = pd.to_numeric(df[col], errors="coerce")
+        df = df / 100.0  # French factors are in percentage points
+        return df
+
+    except Exception as e:
+        return None
+
+
+@st.cache_data(ttl=24 * 3600, show_spinner=False)
+def fetch_momentum_factor():
+    """Fetch momentum factor separately (not part of FF3/FF5 by default)."""
+    try:
+        with urllib.request.urlopen(MOM_URL, timeout=30) as response:
+            zip_data = response.read()
+        with zipfile.ZipFile(io.BytesIO(zip_data)) as z:
+            csv_name = z.namelist()[0]
+            with z.open(csv_name) as f:
+                raw = f.read().decode("utf-8", errors="ignore")
+        lines = raw.split("\n")
+        start_idx = None
+        for i, line in enumerate(lines):
+            parts = [p.strip() for p in line.split(",")]
+            if len(parts) >= 2 and parts[0] and parts[0][0].isdigit() and len(parts[0]) >= 8:
+                start_idx = i
+                break
+        if start_idx is None:
+            return None
+        header_idx = start_idx - 1
+        while header_idx >= 0 and not lines[header_idx].strip():
+            header_idx -= 1
+        end_idx = start_idx
+        while end_idx < len(lines):
+            line = lines[end_idx].strip()
+            if not line:
+                break
+            parts = [p.strip() for p in line.split(",")]
+            if not (parts[0] and parts[0][0].isdigit() and len(parts[0]) >= 8):
+                break
+            end_idx += 1
+        header_line = lines[header_idx]
+        data_lines = lines[start_idx:end_idx]
+        csv_text = header_line + "\n" + "\n".join(data_lines)
+        df = pd.read_csv(io.StringIO(csv_text))
+        date_col = df.columns[0]
+        df = df.rename(columns={date_col: "Date"})
+        df["Date"] = pd.to_datetime(df["Date"], format="%Y%m%d", errors="coerce")
+        df = df.dropna(subset=["Date"]).set_index("Date")
+        # The momentum column is often named "Mom   " with trailing spaces
+        df.columns = [c.strip() for c in df.columns]
+        for col in df.columns:
+            df[col] = pd.to_numeric(df[col], errors="coerce")
+        df = df / 100.0
+        # Rename to "MOM" for consistency
+        mom_col = [c for c in df.columns if "Mom" in c or "MOM" in c.upper()]
+        if mom_col:
+            df = df[mom_col].rename(columns={mom_col[0]: "MOM"})
+            return df
+        return None
+    except Exception:
+        return None
+
+
+def run_factor_regression(portfolio_returns, factor_df, factor_cols):
+    """
+    OLS regression of (R_p - R_f) on factor returns.
+    Returns dict with alpha, betas, t-stats, R², adjusted R².
+    """
+    # Align by date
+    merged = pd.concat([portfolio_returns.rename("R_p"), factor_df], axis=1).dropna()
+    if len(merged) < 30:
+        return None
+
+    excess = merged["R_p"] - merged["RF"]
+    X = merged[factor_cols].values
+    y = excess.values
+
+    n, k = X.shape
+    # Add intercept column
+    X_ = np.column_stack([np.ones(n), X])
+
+    # OLS: β = (XᵀX)⁻¹ Xᵀy
+    try:
+        XtX_inv = np.linalg.inv(X_.T @ X_)
+    except np.linalg.LinAlgError:
+        return None
+    beta = XtX_inv @ X_.T @ y
+    y_hat = X_ @ beta
+    residuals = y - y_hat
+    rss = np.sum(residuals ** 2)
+    tss = np.sum((y - y.mean()) ** 2)
+    r_squared = 1 - rss / tss if tss > 0 else 0
+    adj_r_squared = 1 - (1 - r_squared) * (n - 1) / (n - k - 1) if n > k + 1 else 0
+
+    # Standard errors
+    sigma2 = rss / (n - k - 1) if n > k + 1 else rss
+    var_beta = sigma2 * np.diag(XtX_inv)
+    se_beta = np.sqrt(np.maximum(var_beta, 0))
+    t_stats = beta / np.where(se_beta > 0, se_beta, np.nan)
+
+    # Annualize alpha (it's a daily excess return)
+    alpha_daily = beta[0]
+    alpha_annual = alpha_daily * TRADING_DAYS
+
+    return {
+        "alpha_daily": alpha_daily,
+        "alpha_annual": alpha_annual,
+        "alpha_tstat": t_stats[0],
+        "betas": dict(zip(factor_cols, beta[1:])),
+        "t_stats": dict(zip(factor_cols, t_stats[1:])),
+        "r_squared": r_squared,
+        "adj_r_squared": adj_r_squared,
+        "n_obs": n,
+        "residuals": pd.Series(residuals, index=merged.index),
+        "fitted": pd.Series(y_hat, index=merged.index),
+        "actual": pd.Series(y, index=merged.index),
+    }
+
+
+# ──────────────────────────────────────────────────────────────
+# REGIME DETECTION (v3.0)
+# ──────────────────────────────────────────────────────────────
+
+@st.cache_data(ttl=3600, show_spinner=False)
+def fetch_market_proxy(start, end):
+    """Fetch SPY as the market regime proxy."""
+    try:
+        data = yf.download("SPY", start=start, end=end, auto_adjust=True, progress=False)
+        if data.empty:
+            return pd.DataFrame()
+        if isinstance(data.columns, pd.MultiIndex):
+            return data["Close"]["SPY"].to_frame("SPY")
+        return data[["Close"]].rename(columns={"Close": "SPY"})
+    except Exception:
+        return pd.DataFrame()
+
+
+def detect_regimes(market_prices, dd_threshold=0.10, vol_lookback=20, vol_threshold_quantile=0.85):
+    """
+    Classify each trading day into one of three regimes:
+      - BULL: in an uptrend (not in drawdown > threshold)
+      - BEAR: drawdown from recent peak exceeds threshold
+      - HIGH_VOL: realized vol exceeds quantile of historical realized vol
+
+    Note: HIGH_VOL can overlap with BEAR — we prioritize HIGH_VOL when both trigger.
+    """
+    prices = market_prices["SPY"] if "SPY" in market_prices.columns else market_prices.iloc[:, 0]
+    returns = prices.pct_change().dropna()
+
+    # Drawdown
+    running_max = prices.cummax()
+    drawdown = (prices - running_max) / running_max
+
+    # Rolling realized volatility (annualized)
+    rolling_vol = returns.rolling(vol_lookback).std() * np.sqrt(TRADING_DAYS)
+    vol_threshold = rolling_vol.quantile(vol_threshold_quantile)
+
+    # Classify
+    regime = pd.Series("BULL", index=prices.index)
+    regime[drawdown < -dd_threshold] = "BEAR"
+    regime[rolling_vol > vol_threshold] = "HIGH_VOL"
+
+    return regime, drawdown, rolling_vol
+
+
+def regime_conditional_stats(portfolio_returns, regimes, risk_free_daily):
+    """Compute mean return, vol, and Sharpe within each regime."""
+    merged = pd.concat([portfolio_returns.rename("R"), regimes.rename("regime")], axis=1).dropna()
+    stats = {}
+    for reg in ["BULL", "BEAR", "HIGH_VOL"]:
+        sub = merged[merged["regime"] == reg]["R"]
+        if len(sub) < 5:
+            stats[reg] = {"days": len(sub), "ann_return": np.nan, "ann_vol": np.nan, "sharpe": np.nan}
+            continue
+        ann_return = sub.mean() * TRADING_DAYS
+        ann_vol = sub.std() * np.sqrt(TRADING_DAYS)
+        sharpe = (ann_return - risk_free_daily * TRADING_DAYS) / ann_vol if ann_vol > 0 else np.nan
+        stats[reg] = {
+            "days": len(sub),
+            "ann_return": ann_return,
+            "ann_vol": ann_vol,
+            "sharpe": sharpe,
+        }
+    return stats
+
+
+# ──────────────────────────────────────────────────────────────
 # DATA FETCHING
 # ──────────────────────────────────────────────────────────────
 
@@ -606,7 +789,7 @@ def fetch_price_data(tickers, start, end):
 
 
 # ──────────────────────────────────────────────────────────────
-# PLOTLY THEME — Charcoal / Emerald
+# PLOTLY THEME
 # ──────────────────────────────────────────────────────────────
 
 COLORS = {
@@ -621,6 +804,9 @@ COLORS = {
     "grid":         "rgba(46, 204, 113, 0.06)",
     "text":         "rgba(232, 232, 232, 0.6)",
     "text_bright":  "rgba(232, 232, 232, 0.85)",
+    "bull":         "rgba(34, 197, 94, 0.15)",
+    "bear":         "rgba(239, 68, 68, 0.18)",
+    "highvol":      "rgba(245, 158, 11, 0.18)",
 }
 
 PLOT_LAYOUT = dict(
@@ -628,24 +814,16 @@ PLOT_LAYOUT = dict(
     plot_bgcolor=COLORS["bg"],
     font=dict(color=COLORS["text"], size=12, family="DM Sans, sans-serif"),
     margin=dict(l=48, r=24, t=56, b=48),
-    xaxis=dict(
-        gridcolor=COLORS["grid"],
-        zeroline=False,
-        linecolor="rgba(46, 204, 113, 0.1)",
-        tickfont=dict(family="JetBrains Mono, monospace", size=10),
-    ),
-    yaxis=dict(
-        gridcolor=COLORS["grid"],
-        zeroline=False,
-        linecolor="rgba(46, 204, 113, 0.1)",
-        tickfont=dict(family="JetBrains Mono, monospace", size=10),
-    ),
+    xaxis=dict(gridcolor=COLORS["grid"], zeroline=False,
+               linecolor="rgba(46, 204, 113, 0.1)",
+               tickfont=dict(family="JetBrains Mono, monospace", size=10)),
+    yaxis=dict(gridcolor=COLORS["grid"], zeroline=False,
+               linecolor="rgba(46, 204, 113, 0.1)",
+               tickfont=dict(family="JetBrains Mono, monospace", size=10)),
     title_font=dict(family="DM Sans, sans-serif", size=16, color=COLORS["text_bright"]),
-    hoverlabel=dict(
-        bgcolor="rgba(14, 14, 14, 0.95)",
-        bordercolor="rgba(46, 204, 113, 0.3)",
-        font=dict(family="JetBrains Mono, monospace", size=12, color="#e8e8e8"),
-    ),
+    hoverlabel=dict(bgcolor="rgba(14, 14, 14, 0.95)",
+                    bordercolor="rgba(46, 204, 113, 0.3)",
+                    font=dict(family="JetBrains Mono, monospace", size=12, color="#e8e8e8")),
 )
 
 EMERALD_PALETTE = [
@@ -655,15 +833,10 @@ EMERALD_PALETTE = [
 ]
 
 
-def plot_efficient_frontier(
-    frontier_vol, frontier_ret,
-    mc_vol, mc_ret, mc_sharpe,
-    sharpe_vol, sharpe_ret,
-    minvar_vol, minvar_ret,
-    rp_vol, rp_ret,
-    asset_vols, asset_rets, tickers,
-    risk_free, show_cml, show_rp,
-):
+def plot_efficient_frontier(frontier_vol, frontier_ret, mc_vol, mc_ret, mc_sharpe,
+                             sharpe_vol, sharpe_ret, minvar_vol, minvar_ret,
+                             rp_vol, rp_ret, asset_vols, asset_rets, tickers,
+                             risk_free, show_cml, show_rp):
     fig = go.Figure()
     fig.add_trace(go.Scatter(
         x=mc_vol * 100, y=mc_ret * 100, mode="markers",
@@ -675,69 +848,49 @@ def plot_efficient_frontier(
         name="Random Portfolios",
         hovertemplate="Vol: %{x:.1f}%<br>Ret: %{y:.1f}%<extra></extra>",
     ))
-    fig.add_trace(go.Scatter(
-        x=frontier_vol * 100, y=frontier_ret * 100,
-        mode="lines", line=dict(color=COLORS["frontier"], width=3),
-        name="Efficient Frontier",
-    ))
+    fig.add_trace(go.Scatter(x=frontier_vol * 100, y=frontier_ret * 100,
+                             mode="lines", line=dict(color=COLORS["frontier"], width=3),
+                             name="Efficient Frontier"))
     if show_cml:
         cml_x_max = max(asset_vols.max(), sharpe_vol) * 1.3
         cml_x = np.linspace(0, cml_x_max, 100)
         cml_slope = (sharpe_ret - risk_free) / sharpe_vol
         cml_y = risk_free + cml_slope * cml_x
-        fig.add_trace(go.Scatter(
-            x=cml_x * 100, y=cml_y * 100,
-            mode="lines", line=dict(color=COLORS["cml"], width=2, dash="dash"),
-            name="Capital Market Line",
-        ))
-        fig.add_trace(go.Scatter(
-            x=[0], y=[risk_free * 100], mode="markers",
-            marker=dict(size=10, color="white", symbol="x",
-                        line=dict(width=2, color="white")),
-            name=f"Risk-Free ({risk_free*100:.1f}%)",
-        ))
-    fig.add_trace(go.Scatter(
-        x=[sharpe_vol * 100], y=[sharpe_ret * 100], mode="markers",
-        marker=dict(size=16, color=COLORS["sharpe"], symbol="star",
-                    line=dict(width=1.5, color="white")),
-        name="Max Sharpe",
-        hovertemplate=f"Max Sharpe<br>Vol: {sharpe_vol*100:.2f}%<br>Ret: {sharpe_ret*100:.2f}%<extra></extra>",
-    ))
-    fig.add_trace(go.Scatter(
-        x=[minvar_vol * 100], y=[minvar_ret * 100], mode="markers",
-        marker=dict(size=16, color=COLORS["min_var"], symbol="diamond",
-                    line=dict(width=1.5, color="white")),
-        name="Min Variance",
-        hovertemplate=f"Min Variance<br>Vol: {minvar_vol*100:.2f}%<br>Ret: {minvar_ret*100:.2f}%<extra></extra>",
-    ))
+        fig.add_trace(go.Scatter(x=cml_x * 100, y=cml_y * 100, mode="lines",
+                                 line=dict(color=COLORS["cml"], width=2, dash="dash"),
+                                 name="Capital Market Line"))
+        fig.add_trace(go.Scatter(x=[0], y=[risk_free * 100], mode="markers",
+                                 marker=dict(size=10, color="white", symbol="x",
+                                             line=dict(width=2, color="white")),
+                                 name=f"Risk-Free ({risk_free*100:.1f}%)"))
+    fig.add_trace(go.Scatter(x=[sharpe_vol * 100], y=[sharpe_ret * 100], mode="markers",
+                             marker=dict(size=16, color=COLORS["sharpe"], symbol="star",
+                                         line=dict(width=1.5, color="white")),
+                             name="Max Sharpe"))
+    fig.add_trace(go.Scatter(x=[minvar_vol * 100], y=[minvar_ret * 100], mode="markers",
+                             marker=dict(size=16, color=COLORS["min_var"], symbol="diamond",
+                                         line=dict(width=1.5, color="white")),
+                             name="Min Variance"))
     if show_rp:
-        fig.add_trace(go.Scatter(
-            x=[rp_vol * 100], y=[rp_ret * 100], mode="markers",
-            marker=dict(size=16, color=COLORS["risk_parity"], symbol="hexagon",
-                        line=dict(width=1.5, color="white")),
-            name="Risk Parity",
-            hovertemplate=f"Risk Parity<br>Vol: {rp_vol*100:.2f}%<br>Ret: {rp_ret*100:.2f}%<extra></extra>",
-        ))
-    fig.add_trace(go.Scatter(
-        x=asset_vols * 100, y=asset_rets * 100,
-        mode="markers+text",
-        marker=dict(size=10, color=COLORS["assets"],
-                    line=dict(width=1, color="rgba(255,255,255,0.3)")),
-        text=tickers, textposition="top center",
-        textfont=dict(size=10, color="rgba(232,232,232,0.7)", family="JetBrains Mono"),
-        name="Individual Assets",
-        hovertemplate="%{text}<br>Vol: %{x:.1f}%<br>Ret: %{y:.1f}%<extra></extra>",
-    ))
+        fig.add_trace(go.Scatter(x=[rp_vol * 100], y=[rp_ret * 100], mode="markers",
+                                 marker=dict(size=16, color=COLORS["risk_parity"], symbol="hexagon",
+                                             line=dict(width=1.5, color="white")),
+                                 name="Risk Parity"))
+    fig.add_trace(go.Scatter(x=asset_vols * 100, y=asset_rets * 100,
+                             mode="markers+text",
+                             marker=dict(size=10, color=COLORS["assets"],
+                                         line=dict(width=1, color="rgba(255,255,255,0.3)")),
+                             text=tickers, textposition="top center",
+                             textfont=dict(size=10, color="rgba(232,232,232,0.7)", family="JetBrains Mono"),
+                             name="Individual Assets"))
     title = "Efficient Frontier with Capital Market Line" if show_cml else "Efficient Frontier"
-    fig.update_layout(
-        **PLOT_LAYOUT, title=title,
-        xaxis_title="Annualized Volatility (%)",
-        yaxis_title="Annualized Return (%)",
-        legend=dict(orientation="h", yanchor="bottom", y=-0.25,
-                    xanchor="center", x=0.5,
-                    font=dict(size=11, family="DM Sans")),
-        height=580,
-    )
+    fig.update_layout(**PLOT_LAYOUT, title=title,
+                      xaxis_title="Annualized Volatility (%)",
+                      yaxis_title="Annualized Return (%)",
+                      legend=dict(orientation="h", yanchor="bottom", y=-0.25,
+                                  xanchor="center", x=0.5,
+                                  font=dict(size=11, family="DM Sans")),
+                      height=580)
     return fig
 
 
@@ -776,39 +929,30 @@ def plot_weights_pie(weights, tickers, title):
 def plot_cumulative_returns(prices, tickers):
     normalized = (prices / prices.iloc[0]) * 100
     fig = go.Figure()
-    colors = EMERALD_PALETTE
     for i, ticker in enumerate(tickers):
-        fig.add_trace(go.Scatter(
-            x=normalized.index, y=normalized[ticker], mode="lines",
-            name=ticker, line=dict(width=2, color=colors[i % len(colors)]),
-        ))
-    fig.update_layout(
-        **PLOT_LAYOUT, title="Cumulative Returns (Normalized to 100)",
-        xaxis_title="Date", yaxis_title="Value", height=400,
-        legend=dict(orientation="h", yanchor="bottom", y=-0.3,
-                    xanchor="center", x=0.5, font=dict(family="DM Sans")),
-    )
+        fig.add_trace(go.Scatter(x=normalized.index, y=normalized[ticker], mode="lines",
+                                 name=ticker,
+                                 line=dict(width=2, color=EMERALD_PALETTE[i % len(EMERALD_PALETTE)])))
+    fig.update_layout(**PLOT_LAYOUT, title="Cumulative Returns (Normalized to 100)",
+                      xaxis_title="Date", yaxis_title="Value", height=400,
+                      legend=dict(orientation="h", yanchor="bottom", y=-0.3,
+                                  xanchor="center", x=0.5, font=dict(family="DM Sans")))
     return fig
 
 
 def plot_drawdown(prices, tickers):
     fig = go.Figure()
-    colors = EMERALD_PALETTE
     for i, ticker in enumerate(tickers):
         series = prices[ticker]
         running_max = series.cummax()
         drawdown = (series - running_max) / running_max * 100
-        fig.add_trace(go.Scatter(
-            x=drawdown.index, y=drawdown, mode="lines", name=ticker,
-            line=dict(width=1.5, color=colors[i % len(colors)]),
-            fill="tozeroy", opacity=0.6,
-        ))
-    fig.update_layout(
-        **PLOT_LAYOUT, title="Drawdown Analysis",
-        xaxis_title="Date", yaxis_title="Drawdown (%)", height=350,
-        legend=dict(orientation="h", yanchor="bottom", y=-0.3,
-                    xanchor="center", x=0.5, font=dict(family="DM Sans")),
-    )
+        fig.add_trace(go.Scatter(x=drawdown.index, y=drawdown, mode="lines", name=ticker,
+                                 line=dict(width=1.5, color=EMERALD_PALETTE[i % len(EMERALD_PALETTE)]),
+                                 fill="tozeroy", opacity=0.6))
+    fig.update_layout(**PLOT_LAYOUT, title="Drawdown Analysis",
+                      xaxis_title="Date", yaxis_title="Drawdown (%)", height=350,
+                      legend=dict(orientation="h", yanchor="bottom", y=-0.3,
+                                  xanchor="center", x=0.5, font=dict(family="DM Sans")))
     return fig
 
 
@@ -819,30 +963,59 @@ def plot_backtest(prices, sharpe_w, minvar_w, rp_w, tickers, show_rp):
     rp_curve = backtest_portfolio(prices, rp_w, tickers) if show_rp else None
     equal_curve = backtest_portfolio(prices, eq_w, tickers)
     fig = go.Figure()
-    fig.add_trace(go.Scatter(
-        x=sharpe_curve.index, y=sharpe_curve.values, mode="lines",
-        name="Max Sharpe", line=dict(width=2.5, color=COLORS["sharpe"]),
-    ))
-    fig.add_trace(go.Scatter(
-        x=minvar_curve.index, y=minvar_curve.values, mode="lines",
-        name="Min Variance", line=dict(width=2.5, color=COLORS["min_var"]),
-    ))
+    fig.add_trace(go.Scatter(x=sharpe_curve.index, y=sharpe_curve.values, mode="lines",
+                             name="Max Sharpe", line=dict(width=2.5, color=COLORS["sharpe"])))
+    fig.add_trace(go.Scatter(x=minvar_curve.index, y=minvar_curve.values, mode="lines",
+                             name="Min Variance", line=dict(width=2.5, color=COLORS["min_var"])))
     if show_rp and rp_curve is not None:
-        fig.add_trace(go.Scatter(
-            x=rp_curve.index, y=rp_curve.values, mode="lines",
-            name="Risk Parity", line=dict(width=2.5, color=COLORS["risk_parity"]),
-        ))
-    fig.add_trace(go.Scatter(
-        x=equal_curve.index, y=equal_curve.values, mode="lines",
-        name="Equal Weight", line=dict(width=2, color=COLORS["equal_weight"], dash="dot"),
-    ))
-    fig.update_layout(
-        **PLOT_LAYOUT, title="Portfolio Backtest (Normalized to 100)",
-        xaxis_title="Date", yaxis_title="Portfolio Value", height=450,
-        legend=dict(orientation="h", yanchor="bottom", y=-0.25,
-                    xanchor="center", x=0.5, font=dict(size=11, family="DM Sans")),
-    )
+        fig.add_trace(go.Scatter(x=rp_curve.index, y=rp_curve.values, mode="lines",
+                                 name="Risk Parity", line=dict(width=2.5, color=COLORS["risk_parity"])))
+    fig.add_trace(go.Scatter(x=equal_curve.index, y=equal_curve.values, mode="lines",
+                             name="Equal Weight", line=dict(width=2, color=COLORS["equal_weight"], dash="dot")))
+    fig.update_layout(**PLOT_LAYOUT, title="Portfolio Backtest (Normalized to 100)",
+                      xaxis_title="Date", yaxis_title="Portfolio Value", height=450,
+                      legend=dict(orientation="h", yanchor="bottom", y=-0.25,
+                                  xanchor="center", x=0.5, font=dict(size=11, family="DM Sans")))
     return fig, sharpe_curve, minvar_curve, rp_curve, equal_curve
+
+
+def plot_backtest_with_regimes(curve, regimes, title="Equity Curve with Market Regimes"):
+    """Shade background by regime on top of equity curve."""
+    fig = go.Figure()
+
+    # Get regime change points
+    aligned = regimes.reindex(curve.index, method="ffill").fillna("BULL")
+    # Find regime spans
+    changes = (aligned != aligned.shift(1)).cumsum()
+    for _, grp in aligned.groupby(changes):
+        reg = grp.iloc[0]
+        if reg not in ("BEAR", "HIGH_VOL"):
+            continue
+        x0 = grp.index[0]
+        x1 = grp.index[-1]
+        color = COLORS["bear"] if reg == "BEAR" else COLORS["highvol"]
+        fig.add_vrect(x0=x0, x1=x1, fillcolor=color, opacity=0.6,
+                      layer="below", line_width=0)
+
+    fig.add_trace(go.Scatter(x=curve.index, y=curve.values, mode="lines",
+                             name="Max Sharpe Portfolio",
+                             line=dict(width=2.5, color=COLORS["sharpe"])))
+
+    # Add legend proxies for shading
+    fig.add_trace(go.Scatter(x=[None], y=[None], mode="markers",
+                             marker=dict(size=14, color="rgba(239, 68, 68, 0.5)", symbol="square"),
+                             name="Bear (> 10% drawdown)"))
+    fig.add_trace(go.Scatter(x=[None], y=[None], mode="markers",
+                             marker=dict(size=14, color="rgba(245, 158, 11, 0.5)", symbol="square"),
+                             name="High Volatility (top 15%)"))
+
+    fig.update_layout(**PLOT_LAYOUT, title=title,
+                      xaxis_title="Date", yaxis_title="Portfolio Value",
+                      height=440,
+                      legend=dict(orientation="h", yanchor="bottom", y=-0.25,
+                                  xanchor="center", x=0.5,
+                                  font=dict(size=11, family="DM Sans")))
+    return fig
 
 
 def plot_return_distribution(daily_returns, weights, title, color):
@@ -850,25 +1023,20 @@ def plot_return_distribution(daily_returns, weights, title, color):
     mu = port_returns.mean()
     sigma = port_returns.std()
     fig = go.Figure()
-    fig.add_trace(go.Histogram(
-        x=port_returns * 100, nbinsx=80,
-        marker_color=color, opacity=0.7,
-        name="Observed", histnorm="probability density",
-    ))
+    fig.add_trace(go.Histogram(x=port_returns * 100, nbinsx=80,
+                               marker_color=color, opacity=0.7,
+                               name="Observed", histnorm="probability density"))
     x_range = np.linspace(port_returns.min(), port_returns.max(), 200)
     normal_pdf = norm.pdf(x_range, mu, sigma)
-    fig.add_trace(go.Scatter(
-        x=x_range * 100, y=normal_pdf / 100,
-        mode="lines", line=dict(color="rgba(232,232,232,0.6)", width=2, dash="dash"),
-        name="Normal Fit",
-    ))
-    fig.update_layout(
-        **PLOT_LAYOUT, title=title,
-        xaxis_title="Daily Return (%)", yaxis_title="Density", height=380,
-        showlegend=True,
-        legend=dict(orientation="h", yanchor="bottom", y=-0.3,
-                    xanchor="center", x=0.5, font=dict(family="DM Sans")),
-    )
+    fig.add_trace(go.Scatter(x=x_range * 100, y=normal_pdf / 100,
+                             mode="lines",
+                             line=dict(color="rgba(232,232,232,0.6)", width=2, dash="dash"),
+                             name="Normal Fit"))
+    fig.update_layout(**PLOT_LAYOUT, title=title,
+                      xaxis_title="Daily Return (%)", yaxis_title="Density", height=380,
+                      showlegend=True,
+                      legend=dict(orientation="h", yanchor="bottom", y=-0.3,
+                                  xanchor="center", x=0.5, font=dict(family="DM Sans")))
     return fig
 
 
@@ -877,57 +1045,107 @@ def plot_risk_contributions(weights, cov_matrix, tickers, title):
     mask = rc > 0.5
     filtered_rc = rc[mask]
     filtered_tickers = [t for t, m in zip(tickers, mask) if m]
-    fig = go.Figure(data=go.Bar(
-        x=filtered_tickers, y=filtered_rc,
-        marker_color=EMERALD_PALETTE[:len(filtered_tickers)],
-        text=[f"{v:.1f}%" for v in filtered_rc],
-        textposition="outside",
-        textfont=dict(size=11, family="JetBrains Mono"),
-    ))
-    fig.update_layout(
-        **PLOT_LAYOUT, title=title,
-        xaxis_title="Asset", yaxis_title="Risk Contribution (%)", height=380,
-    )
+    fig = go.Figure(data=go.Bar(x=filtered_tickers, y=filtered_rc,
+                                 marker_color=EMERALD_PALETTE[:len(filtered_tickers)],
+                                 text=[f"{v:.1f}%" for v in filtered_rc],
+                                 textposition="outside",
+                                 textfont=dict(size=11, family="JetBrains Mono")))
+    fig.update_layout(**PLOT_LAYOUT, title=title,
+                      xaxis_title="Asset", yaxis_title="Risk Contribution (%)", height=380)
     return fig
 
 
 def plot_rolling_volatility(daily_returns, tickers, window=30):
     fig = go.Figure()
-    colors = EMERALD_PALETTE
     for i, ticker in enumerate(tickers):
         rolling_vol = daily_returns[ticker].rolling(window).std() * np.sqrt(TRADING_DAYS) * 100
-        fig.add_trace(go.Scatter(
-            x=rolling_vol.index, y=rolling_vol.values, mode="lines",
-            name=ticker, line=dict(width=1.5, color=colors[i % len(colors)]),
-        ))
-    fig.update_layout(
-        **PLOT_LAYOUT, title=f"Rolling {window}-Day Annualized Volatility (%)",
-        xaxis_title="Date", yaxis_title="Volatility (%)", height=400,
-        legend=dict(orientation="h", yanchor="bottom", y=-0.3,
-                    xanchor="center", x=0.5, font=dict(family="DM Sans")),
-    )
+        fig.add_trace(go.Scatter(x=rolling_vol.index, y=rolling_vol.values, mode="lines",
+                                 name=ticker,
+                                 line=dict(width=1.5, color=EMERALD_PALETTE[i % len(EMERALD_PALETTE)])))
+    fig.update_layout(**PLOT_LAYOUT, title=f"Rolling {window}-Day Annualized Volatility (%)",
+                      xaxis_title="Date", yaxis_title="Volatility (%)", height=400,
+                      legend=dict(orientation="h", yanchor="bottom", y=-0.3,
+                                  xanchor="center", x=0.5, font=dict(family="DM Sans")))
     return fig
 
 
 def plot_rolling_correlation(daily_returns, tickers, window=60):
     fig = go.Figure()
-    colors = EMERALD_PALETTE
     color_idx = 0
     for i in range(len(tickers)):
         for j in range(i + 1, len(tickers)):
             rolling_corr = daily_returns[tickers[i]].rolling(window).corr(daily_returns[tickers[j]])
-            fig.add_trace(go.Scatter(
-                x=rolling_corr.index, y=rolling_corr.values, mode="lines",
-                name=f"{tickers[i]} / {tickers[j]}",
-                line=dict(width=1.5, color=colors[color_idx % len(colors)]),
-            ))
+            fig.add_trace(go.Scatter(x=rolling_corr.index, y=rolling_corr.values, mode="lines",
+                                     name=f"{tickers[i]} / {tickers[j]}",
+                                     line=dict(width=1.5,
+                                               color=EMERALD_PALETTE[color_idx % len(EMERALD_PALETTE)])))
             color_idx += 1
-    fig.update_layout(
-        **PLOT_LAYOUT, title=f"Rolling {window}-Day Pairwise Correlation",
-        xaxis_title="Date", yaxis_title="Correlation", height=400,
-        legend=dict(orientation="h", yanchor="bottom", y=-0.35,
-                    xanchor="center", x=0.5, font=dict(family="DM Sans")),
-    )
+    fig.update_layout(**PLOT_LAYOUT, title=f"Rolling {window}-Day Pairwise Correlation",
+                      xaxis_title="Date", yaxis_title="Correlation", height=400,
+                      legend=dict(orientation="h", yanchor="bottom", y=-0.35,
+                                  xanchor="center", x=0.5, font=dict(family="DM Sans")))
+    return fig
+
+
+def plot_factor_betas(reg_results, strategy_names):
+    """Grouped bar chart of factor betas across strategies."""
+    factor_names = list(reg_results[strategy_names[0]]["betas"].keys())
+    fig = go.Figure()
+    strategy_colors = {
+        "Max Sharpe": COLORS["sharpe"],
+        "Min Variance": COLORS["min_var"],
+        "Risk Parity": COLORS["risk_parity"],
+    }
+    for strat in strategy_names:
+        betas = list(reg_results[strat]["betas"].values())
+        tstats = list(reg_results[strat]["t_stats"].values())
+        hover = [f"t-stat: {t:.2f}" for t in tstats]
+        fig.add_trace(go.Bar(x=factor_names, y=betas, name=strat,
+                             marker_color=strategy_colors.get(strat, "#888"),
+                             text=[f"{b:.3f}" for b in betas],
+                             textposition="outside",
+                             textfont=dict(size=10, family="JetBrains Mono"),
+                             customdata=hover,
+                             hovertemplate="%{x}<br>β: %{y:.3f}<br>%{customdata}<extra>" + strat + "</extra>"))
+    fig.add_hline(y=0, line_dash="dash", line_color="rgba(232,232,232,0.3)")
+    fig.update_layout(**PLOT_LAYOUT, title="Factor Loadings by Strategy (Fama-French Regression)",
+                      xaxis_title="Factor", yaxis_title="Beta (Factor Exposure)",
+                      height=430, barmode="group",
+                      legend=dict(orientation="h", yanchor="bottom", y=-0.25,
+                                  xanchor="center", x=0.5, font=dict(family="DM Sans")))
+    return fig
+
+
+def plot_regime_stats_bar(regime_stats_dict, strategy_names):
+    """Show annualized return in each regime for each strategy."""
+    regimes = ["BULL", "BEAR", "HIGH_VOL"]
+    regime_display = {"BULL": "Bull", "BEAR": "Bear", "HIGH_VOL": "High Volatility"}
+    fig = go.Figure()
+    strategy_colors = {
+        "Max Sharpe": COLORS["sharpe"],
+        "Min Variance": COLORS["min_var"],
+        "Risk Parity": COLORS["risk_parity"],
+    }
+    for strat in strategy_names:
+        rets = [regime_stats_dict[strat][r]["ann_return"] * 100 if not np.isnan(regime_stats_dict[strat][r]["ann_return"]) else 0
+                for r in regimes]
+        sharpes = [regime_stats_dict[strat][r]["sharpe"] for r in regimes]
+        hover = [f"Sharpe: {s:.2f}" if not np.isnan(s) else "insufficient data"
+                 for s in sharpes]
+        fig.add_trace(go.Bar(x=[regime_display[r] for r in regimes],
+                             y=rets, name=strat,
+                             marker_color=strategy_colors.get(strat, "#888"),
+                             text=[f"{r:.1f}%" for r in rets],
+                             textposition="outside",
+                             textfont=dict(size=10, family="JetBrains Mono"),
+                             customdata=hover,
+                             hovertemplate="%{x}<br>Ann. Return: %{y:.1f}%<br>%{customdata}<extra>" + strat + "</extra>"))
+    fig.add_hline(y=0, line_dash="dash", line_color="rgba(232,232,232,0.3)")
+    fig.update_layout(**PLOT_LAYOUT, title="Annualized Return by Market Regime",
+                      xaxis_title="Regime", yaxis_title="Annualized Return (%)",
+                      height=430, barmode="group",
+                      legend=dict(orientation="h", yanchor="bottom", y=-0.25,
+                                  xanchor="center", x=0.5, font=dict(family="DM Sans")))
     return fig
 
 
@@ -982,6 +1200,14 @@ show_distributions = st.sidebar.checkbox("Return distributions", value=False)
 show_risk_contrib = st.sidebar.checkbox("Risk contribution breakdown", value=False)
 show_rolling = st.sidebar.checkbox("Rolling volatility / correlation", value=False)
 
+st.sidebar.markdown("### Advanced Analysis")
+show_factor = st.sidebar.checkbox("Factor regression (Fama-French)", value=True)
+show_regimes = st.sidebar.checkbox("Market regime analysis", value=True)
+if show_factor:
+    ff_model = st.sidebar.radio("Factor model", ["FF5 + MOM", "FF5", "FF3 + MOM", "FF3"], index=0)
+else:
+    ff_model = "FF5"
+
 if show_var:
     var_confidence = st.sidebar.slider(
         "VaR confidence level (%)", min_value=90.0, max_value=99.9, value=95.0, step=0.5,
@@ -1012,10 +1238,10 @@ st.markdown("""
         <div class="qf-title-wrap">
             <div class="qf-title">
                 <span class="qf-title-plain">Quant</span><span class="qf-title-accent">Folio</span>
-                <span class="qf-version">v2.0</span>
+                <span class="qf-version">v3.0</span>
             </div>
             <div class="qf-subtitle">
-                Mean-variance optimization · Efficient frontier construction · Monte Carlo simulation
+                Mean-variance optimization · Fama-French factor analysis · Market regime detection
             </div>
         </div>
     </div>
@@ -1044,10 +1270,8 @@ if run_button or "results" in st.session_state:
         st.stop()
 
     prices = prices[valid_tickers]
-    # ──────────────────────────────────────────────────────────
-    # SIMPLE RETURNS (not log) — mathematically consistent
-    # with portfolio weighted sum R_p = w · R
-    # ──────────────────────────────────────────────────────────
+
+    # Simple returns for mathematical consistency
     daily_returns = prices.pct_change().dropna()
     mean_returns = daily_returns.mean() * TRADING_DAYS
     cov_matrix = daily_returns.cov() * TRADING_DAYS
@@ -1093,7 +1317,7 @@ if run_button or "results" in st.session_state:
     asset_rets = mean_returns.values
     st.session_state["results"] = True
 
-    st.markdown('<div class="qf-fade-in">', unsafe_allow_html=True)
+    # ══════════ RESULTS ══════════
     st.markdown("## Optimal Portfolios")
 
     if show_risk_parity:
@@ -1136,7 +1360,6 @@ if run_button or "results" in st.session_state:
             if show_var:
                 m12.metric(f"CVaR {var_confidence*100:.0f}%", f"{rp_cvar*100:.2f}%")
 
-    st.markdown('</div>', unsafe_allow_html=True)
     st.markdown("---")
 
     st.plotly_chart(
@@ -1150,6 +1373,7 @@ if run_button or "results" in st.session_state:
         use_container_width=True,
     )
 
+    # ═══ ALLOCATIONS ═══
     st.markdown("## Portfolio Allocations")
     if show_risk_parity:
         cp1, cp2, cp3 = st.columns(3)
@@ -1158,18 +1382,15 @@ if run_button or "results" in st.session_state:
         cp3 = None
 
     with cp1:
-        st.plotly_chart(
-            plot_weights_pie(sharpe_weights, valid_tickers, "Max Sharpe"),
-            use_container_width=True)
+        st.plotly_chart(plot_weights_pie(sharpe_weights, valid_tickers, "Max Sharpe"),
+                        use_container_width=True)
     with cp2:
-        st.plotly_chart(
-            plot_weights_pie(minvar_weights, valid_tickers, "Min Variance"),
-            use_container_width=True)
+        st.plotly_chart(plot_weights_pie(minvar_weights, valid_tickers, "Min Variance"),
+                        use_container_width=True)
     if show_risk_parity and cp3 is not None:
         with cp3:
-            st.plotly_chart(
-                plot_weights_pie(rp_weights, valid_tickers, "Risk Parity"),
-                use_container_width=True)
+            st.plotly_chart(plot_weights_pie(rp_weights, valid_tickers, "Risk Parity"),
+                            use_container_width=True)
 
     if show_risk_contrib:
         st.markdown("### Risk Contributions")
@@ -1178,21 +1399,18 @@ if run_button or "results" in st.session_state:
         else:
             rc1, rc2 = st.columns(2)
             rc3 = None
-
         with rc1:
-            st.plotly_chart(
-                plot_risk_contributions(sharpe_weights, cov_matrix.values, valid_tickers, "Max Sharpe"),
-                use_container_width=True)
+            st.plotly_chart(plot_risk_contributions(sharpe_weights, cov_matrix.values, valid_tickers, "Max Sharpe"),
+                            use_container_width=True)
         with rc2:
-            st.plotly_chart(
-                plot_risk_contributions(minvar_weights, cov_matrix.values, valid_tickers, "Min Variance"),
-                use_container_width=True)
+            st.plotly_chart(plot_risk_contributions(minvar_weights, cov_matrix.values, valid_tickers, "Min Variance"),
+                            use_container_width=True)
         if show_risk_parity and rc3 is not None:
             with rc3:
-                st.plotly_chart(
-                    plot_risk_contributions(rp_weights, cov_matrix.values, valid_tickers, "Risk Parity"),
-                    use_container_width=True)
+                st.plotly_chart(plot_risk_contributions(rp_weights, cov_matrix.values, valid_tickers, "Risk Parity"),
+                                use_container_width=True)
 
+    # ═══ WEIGHTS TABLE ═══
     st.markdown("### Detailed Weights")
     weight_data = {
         "Ticker": valid_tickers,
@@ -1206,25 +1424,20 @@ if run_button or "results" in st.session_state:
     filter_mask = (weight_df["Max Sharpe (%)"] > 0.5) | (weight_df["Min Variance (%)"] > 0.5)
     if show_risk_parity:
         filter_mask = filter_mask | (weight_df["Risk Parity (%)"] > 0.5)
-
     st.dataframe(weight_df[filter_mask], use_container_width=True)
 
     csv_buffer = io.StringIO()
     weight_df.to_csv(csv_buffer)
-    st.download_button(
-        "Download weights as CSV",
-        data=csv_buffer.getvalue(),
-        file_name="quantfolio_weights.csv",
-        mime="text/csv",
-    )
+    st.download_button("Download weights as CSV", data=csv_buffer.getvalue(),
+                       file_name="quantfolio_weights.csv", mime="text/csv")
 
     st.markdown("---")
 
+    # ═══ BACKTEST ═══
     if show_backtest:
         st.markdown("## Backtest")
         bt_fig, sharpe_curve, minvar_curve, rp_curve, equal_curve = plot_backtest(
             prices, sharpe_weights, minvar_weights, rp_weights, valid_tickers, show_risk_parity)
-
         st.plotly_chart(bt_fig, use_container_width=True)
 
         bt_data = {
@@ -1234,10 +1447,205 @@ if run_button or "results" in st.session_state:
         if show_risk_parity and rp_curve is not None:
             bt_data["Risk Parity"] = calc_backtest_stats(rp_curve, risk_free)
         bt_data["Equal Weight"] = calc_backtest_stats(equal_curve, risk_free)
-
         st.dataframe(pd.DataFrame(bt_data), use_container_width=True)
         st.markdown("---")
+    else:
+        sharpe_curve = backtest_portfolio(prices, sharpe_weights, valid_tickers)
+        minvar_curve = backtest_portfolio(prices, minvar_weights, valid_tickers)
+        rp_curve = backtest_portfolio(prices, rp_weights, valid_tickers) if show_risk_parity else None
 
+    # ═══ FACTOR REGRESSION (v3.0) ═══
+    if show_factor:
+        st.markdown("## Factor Regression — Fama-French Decomposition")
+        st.markdown(
+            "> Regresses portfolio excess returns on academic risk factors to isolate "
+            "**alpha** (skill) from **beta** (exposure to known risk premia). A high positive alpha "
+            "with statistical significance (|t| > 2) suggests the strategy delivers return beyond "
+            "what's explained by conventional factor exposures. Low alpha with high R² means the "
+            "strategy's returns are mostly explained by its factor bets — which may or may not be "
+            "intentional."
+        )
+
+        with st.spinner("Loading Fama-French factors from Ken French data library..."):
+            # Determine which model
+            want_mom = "MOM" in ff_model
+            base = "FF5" if "FF5" in ff_model else "FF3"
+            ff_data = fetch_ff_factors(base)
+            mom_data = fetch_momentum_factor() if want_mom else None
+
+        if ff_data is None:
+            st.warning("Could not fetch Fama-French factor data. The Ken French data server may be "
+                       "unreachable. Skipping factor regression.")
+        else:
+            # Merge momentum if requested
+            if want_mom and mom_data is not None:
+                factor_df = ff_data.join(mom_data, how="inner")
+                factor_cols = [c for c in factor_df.columns if c != "RF"]
+            else:
+                factor_df = ff_data
+                factor_cols = [c for c in factor_df.columns if c != "RF"]
+
+            # Prepare daily returns from backtest curves (simple returns)
+            port_returns = {
+                "Max Sharpe": sharpe_curve.pct_change().dropna(),
+                "Min Variance": minvar_curve.pct_change().dropna(),
+            }
+            if show_risk_parity and rp_curve is not None:
+                port_returns["Risk Parity"] = rp_curve.pct_change().dropna()
+
+            reg_results = {}
+            for strat, ret in port_returns.items():
+                res = run_factor_regression(ret, factor_df, factor_cols)
+                if res is not None:
+                    reg_results[strat] = res
+
+            if not reg_results:
+                st.warning("Not enough overlapping dates between portfolio returns and factor data to run regression.")
+            else:
+                # Metric summary
+                strat_names = list(reg_results.keys())
+                n_strat = len(strat_names)
+                cols = st.columns(n_strat)
+                for i, strat in enumerate(strat_names):
+                    r = reg_results[strat]
+                    with cols[i]:
+                        label_class = {
+                            "Max Sharpe": "qf-strategy-sharpe",
+                            "Min Variance": "qf-strategy-minvar",
+                            "Risk Parity": "qf-strategy-rp",
+                        }.get(strat, "qf-strategy-sharpe")
+                        st.markdown(f'<div class="qf-strategy-label {label_class}">{strat.upper()}</div>',
+                                    unsafe_allow_html=True)
+                        m1, m2 = st.columns(2)
+                        m1.metric("Alpha (ann.)", f"{r['alpha_annual']*100:.2f}%",
+                                  help=f"Daily α t-stat = {r['alpha_tstat']:.2f}")
+                        m2.metric("R²", f"{r['r_squared']*100:.1f}%")
+
+                # Factor loadings plot
+                st.plotly_chart(plot_factor_betas(reg_results, strat_names),
+                                use_container_width=True)
+
+                # Detailed regression table
+                st.markdown("### Regression Coefficients")
+
+                def _fmt_coef(v, t):
+                    stars = ""
+                    if abs(t) >= 2.58:
+                        stars = "***"
+                    elif abs(t) >= 1.96:
+                        stars = "**"
+                    elif abs(t) >= 1.64:
+                        stars = "*"
+                    return f"{v:.4f}{stars}"
+
+                detail_rows = []
+                for strat, r in reg_results.items():
+                    row = {"Strategy": strat,
+                           "α (daily)": _fmt_coef(r["alpha_daily"], r["alpha_tstat"]),
+                           "α t-stat": f"{r['alpha_tstat']:.2f}"}
+                    for f in factor_cols:
+                        row[f"β_{f}"] = _fmt_coef(r["betas"][f], r["t_stats"][f])
+                    row["R²"] = f"{r['r_squared']*100:.1f}%"
+                    row["Adj. R²"] = f"{r['adj_r_squared']*100:.1f}%"
+                    row["N"] = r["n_obs"]
+                    detail_rows.append(row)
+
+                detail_df = pd.DataFrame(detail_rows).set_index("Strategy")
+                st.dataframe(detail_df, use_container_width=True)
+
+                st.markdown(
+                    "> **Significance codes:** *** = 99% (|t| ≥ 2.58), ** = 95% (|t| ≥ 1.96), "
+                    "* = 90% (|t| ≥ 1.64). Positive α t-stat with absolute value ≥ 1.96 indicates "
+                    "statistically significant outperformance relative to the factor model.\n"
+                    ">\n"
+                    "> **Factor interpretations:** *Mkt-RF* = market excess return (market beta); "
+                    "*SMB* = small minus big (size tilt); *HML* = high minus low book-to-market (value tilt); "
+                    "*RMW* = robust minus weak profitability (quality tilt); *CMA* = conservative minus "
+                    "aggressive investment (quality tilt); *MOM* = momentum (trend-following tilt)."
+                )
+                st.markdown("---")
+
+    # ═══ MARKET REGIME ANALYSIS (v3.0) ═══
+    if show_regimes:
+        st.markdown("## Market Regime Analysis")
+        st.markdown(
+            "> Classifies each trading day into one of three regimes using the S&P 500 (SPY) as the market proxy. "
+            "**Bear** regime triggers when SPY is in a > 10% drawdown from its prior peak. "
+            "**High Volatility** regime triggers when SPY's 20-day realized volatility exceeds the 85th percentile. "
+            "Everything else is **Bull**. Regime-conditional statistics reveal which strategies are truly "
+            "diversified versus which only perform in calm uptrends."
+        )
+
+        with st.spinner("Detecting market regimes from SPY..."):
+            spy_prices = fetch_market_proxy(str(start_date), str(end_date))
+
+        if spy_prices.empty:
+            st.warning("Could not fetch SPY data for regime detection. Skipping regime analysis.")
+        else:
+            regimes, mkt_dd, mkt_vol = detect_regimes(spy_prices)
+
+            # Summary of regime days
+            reg_counts = regimes.value_counts()
+            total_days = len(regimes)
+
+            reg_col1, reg_col2, reg_col3 = st.columns(3)
+            reg_col1.metric("Bull Days",
+                            f"{reg_counts.get('BULL', 0)}",
+                            f"{reg_counts.get('BULL', 0)/total_days*100:.0f}% of period")
+            reg_col2.metric("Bear Days",
+                            f"{reg_counts.get('BEAR', 0)}",
+                            f"{reg_counts.get('BEAR', 0)/total_days*100:.0f}% of period")
+            reg_col3.metric("High-Vol Days",
+                            f"{reg_counts.get('HIGH_VOL', 0)}",
+                            f"{reg_counts.get('HIGH_VOL', 0)/total_days*100:.0f}% of period")
+
+            # Equity curve with regime shading (Max Sharpe as representative)
+            st.plotly_chart(plot_backtest_with_regimes(sharpe_curve, regimes,
+                                                       title="Max Sharpe Portfolio — Equity Curve with Regime Overlay"),
+                            use_container_width=True)
+
+            # Regime-conditional stats
+            port_returns_for_regime = {
+                "Max Sharpe": sharpe_curve.pct_change().dropna(),
+                "Min Variance": minvar_curve.pct_change().dropna(),
+            }
+            if show_risk_parity and rp_curve is not None:
+                port_returns_for_regime["Risk Parity"] = rp_curve.pct_change().dropna()
+
+            regime_stats = {
+                strat: regime_conditional_stats(ret, regimes, risk_free / TRADING_DAYS)
+                for strat, ret in port_returns_for_regime.items()
+            }
+
+            st.plotly_chart(plot_regime_stats_bar(regime_stats, list(regime_stats.keys())),
+                            use_container_width=True)
+
+            # Detailed table
+            st.markdown("### Regime-Conditional Performance")
+            rows = []
+            for strat, stats in regime_stats.items():
+                for reg_name, reg_label in [("BULL", "Bull"), ("BEAR", "Bear"), ("HIGH_VOL", "High Vol")]:
+                    s = stats[reg_name]
+                    rows.append({
+                        "Strategy": strat,
+                        "Regime": reg_label,
+                        "Days": s["days"],
+                        "Ann. Return": f"{s['ann_return']*100:.1f}%" if not np.isnan(s['ann_return']) else "—",
+                        "Ann. Vol": f"{s['ann_vol']*100:.1f}%" if not np.isnan(s['ann_vol']) else "—",
+                        "Sharpe": f"{s['sharpe']:.2f}" if not np.isnan(s['sharpe']) else "—",
+                    })
+            regime_df = pd.DataFrame(rows)
+            st.dataframe(regime_df, use_container_width=True, hide_index=True)
+
+            st.markdown(
+                "> **Reading the table:** The strategy with the highest Bull-regime return is often not "
+                "the most resilient in Bear or High-Vol regimes. A risk parity or min-variance portfolio "
+                "typically sacrifices some Bull upside in exchange for much better downside performance. "
+                "The true 'diversified' strategy is the one with the smallest gap between Bull and Bear Sharpe ratios."
+            )
+            st.markdown("---")
+
+    # ═══ RETURN DISTRIBUTIONS ═══
     if show_distributions:
         st.markdown("## Return Distribution")
         if show_risk_parity:
@@ -1245,25 +1653,22 @@ if run_button or "results" in st.session_state:
         else:
             dc1, dc2 = st.columns(2)
             dc3 = None
-
         with dc1:
-            st.plotly_chart(
-                plot_return_distribution(daily_returns, sharpe_weights,
-                                        "Max Sharpe Returns", COLORS["sharpe"]),
-                use_container_width=True)
+            st.plotly_chart(plot_return_distribution(daily_returns, sharpe_weights,
+                                                    "Max Sharpe Returns", COLORS["sharpe"]),
+                            use_container_width=True)
         with dc2:
-            st.plotly_chart(
-                plot_return_distribution(daily_returns, minvar_weights,
-                                        "Min Variance Returns", COLORS["min_var"]),
-                use_container_width=True)
+            st.plotly_chart(plot_return_distribution(daily_returns, minvar_weights,
+                                                    "Min Variance Returns", COLORS["min_var"]),
+                            use_container_width=True)
         if show_risk_parity and dc3 is not None:
             with dc3:
-                st.plotly_chart(
-                    plot_return_distribution(daily_returns, rp_weights,
-                                            "Risk Parity Returns", COLORS["risk_parity"]),
-                    use_container_width=True)
+                st.plotly_chart(plot_return_distribution(daily_returns, rp_weights,
+                                                        "Risk Parity Returns", COLORS["risk_parity"]),
+                                use_container_width=True)
         st.markdown("---")
 
+    # ═══ ANALYSIS TABS ═══
     st.markdown("## Analysis")
     tab_names = ["Cumulative Returns", "Drawdown", "Correlation"]
     if show_rolling:
@@ -1283,24 +1688,17 @@ if run_button or "results" in st.session_state:
 
     with tabs[tab_idx]:
         st.plotly_chart(plot_correlation_heatmap(corr_matrix, valid_tickers), use_container_width=True)
-        st.markdown(
-            "> Assets with low or negative correlation "
-            "reduce portfolio variance more effectively. "
-            "The optimizer exploits this to construct efficient portfolios."
-        )
+        st.markdown("> Assets with low or negative correlation reduce portfolio variance more effectively.")
     tab_idx += 1
 
     if show_rolling:
         with tabs[tab_idx]:
-            st.plotly_chart(
-                plot_rolling_volatility(daily_returns, valid_tickers, rolling_window),
-                use_container_width=True)
+            st.plotly_chart(plot_rolling_volatility(daily_returns, valid_tickers, rolling_window),
+                            use_container_width=True)
         tab_idx += 1
-
         with tabs[tab_idx]:
-            st.plotly_chart(
-                plot_rolling_correlation(daily_returns, valid_tickers, rolling_window),
-                use_container_width=True)
+            st.plotly_chart(plot_rolling_correlation(daily_returns, valid_tickers, rolling_window),
+                            use_container_width=True)
         tab_idx += 1
 
     with tabs[tab_idx]:
@@ -1309,19 +1707,12 @@ if run_button or "results" in st.session_state:
             "Ann. Return (%)": np.round(asset_rets * 100, 2),
             "Ann. Volatility (%)": np.round(asset_vols * 100, 2),
             "Sharpe Ratio": np.round((asset_rets - risk_free) / asset_vols, 3),
-            "Max Drawdown (%)": [
-                round((prices[t] / prices[t].cummax() - 1).min() * 100, 2)
-                for t in valid_tickers
-            ],
+            "Max Drawdown (%)": [round((prices[t] / prices[t].cummax() - 1).min() * 100, 2)
+                                 for t in valid_tickers],
             "Daily Skewness": np.round(daily_returns[valid_tickers].skew().values, 3),
             "Daily Kurtosis": np.round(daily_returns[valid_tickers].kurtosis().values, 3),
         }).set_index("Ticker")
         st.dataframe(stats_df, use_container_width=True)
-        st.markdown(
-            "> Skewness < 0 indicates left-tail risk. "
-            "Excess kurtosis > 0 indicates fat tails — extreme moves occur more "
-            "frequently than a normal distribution predicts."
-        )
 
     st.markdown("---")
     st.markdown("## Data Summary")
@@ -1338,8 +1729,7 @@ st.markdown("---")
 st.markdown("""
 <div class="qf-footer">
     Built by <a href="https://marinxhemollari.com" target="_blank">Marin Xhemollari</a> ·
-    Markowitz Mean-Variance Optimization ·
-    Market data via Yahoo Finance
-    <div class="qf-footer-mono">quantfolio v2.0 · scipy.optimize.SLSQP · plotly.js</div>
+    Markowitz MVO · Fama-French Factor Model · Regime Detection
+    <div class="qf-footer-mono">quantfolio v3.0 · scipy.optimize.SLSQP · Ken French Data Library · plotly.js</div>
 </div>
 """, unsafe_allow_html=True)
