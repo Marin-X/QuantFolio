@@ -67,7 +67,6 @@ st.markdown("""
     --glass-border-hover: rgba(46, 204, 113, 0.25);
 }
 
-/* ═══════ KEYFRAME ANIMATIONS ═══════ */
 @keyframes gradientShift {
     0%   { background-position: 0% 50%; }
     50%  { background-position: 100% 50%; }
@@ -85,16 +84,11 @@ st.markdown("""
     0%, 100% { box-shadow: 0 0 20px rgba(46, 204, 113, 0.08); }
     50%      { box-shadow: 0 0 40px rgba(46, 204, 113, 0.18); }
 }
-@keyframes shimmer {
-    0%   { background-position: -200% 0; }
-    100% { background-position: 200% 0; }
-}
 @keyframes logoFloat {
     0%, 100% { transform: translateY(0px); }
     50%      { transform: translateY(-6px); }
 }
 
-/* ═══════ GLOBAL OVERRIDES ═══════ */
 html, body, [data-testid="stAppViewContainer"] {
     background-color: var(--charcoal-900) !important;
     color: var(--text-primary) !important;
@@ -105,13 +99,11 @@ html, body, [data-testid="stAppViewContainer"] {
     max-width: 1400px;
 }
 
-/* ═══════ SCROLLBAR ═══════ */
 ::-webkit-scrollbar { width: 6px; }
 ::-webkit-scrollbar-track { background: var(--charcoal-800); }
 ::-webkit-scrollbar-thumb { background: var(--charcoal-400); border-radius: 3px; }
 ::-webkit-scrollbar-thumb:hover { background: var(--emerald-400); }
 
-/* ═══════ ANIMATED GRADIENT HEADER ═══════ */
 .qf-header {
     background: linear-gradient(135deg,
         var(--charcoal-800) 0%,
@@ -169,9 +161,7 @@ html, body, [data-testid="stAppViewContainer"] {
     flex-wrap: wrap;
     gap: 0.25rem;
 }
-.qf-title-plain {
-    color: var(--text-primary);
-}
+.qf-title-plain { color: var(--text-primary); }
 .qf-title-accent {
     color: var(--emerald-500);
     background: linear-gradient(135deg, #2ecc71 0%, #1abc9c 100%);
@@ -201,7 +191,6 @@ html, body, [data-testid="stAppViewContainer"] {
     margin-left: 0.75rem;
 }
 
-/* ═══════ SECTION HEADERS ═══════ */
 h2, .qf-section-title {
     font-family: 'Cormorant Garamond', serif !important;
     font-weight: 600 !important;
@@ -215,7 +204,6 @@ h3, h4 {
     color: var(--text-primary) !important;
 }
 
-/* ═══════ GLASSMORPHISM METRIC CARDS ═══════ */
 div[data-testid="stMetric"] {
     background: var(--glass-bg) !important;
     backdrop-filter: blur(16px);
@@ -249,11 +237,7 @@ div[data-testid="stMetric"] [data-testid="stMetricValue"] {
     white-space: nowrap !important;
     overflow: visible !important;
 }
-div[data-testid="stMetric"] [data-testid="stMetricDelta"] {
-    font-family: 'JetBrains Mono', monospace !important;
-}
 
-/* ═══════ SIDEBAR ═══════ */
 section[data-testid="stSidebar"] {
     background: var(--charcoal-800) !important;
     border-right: 1px solid rgba(46, 204, 113, 0.08) !important;
@@ -280,7 +264,6 @@ section[data-testid="stSidebar"] .stDateInput label {
     color: var(--text-secondary) !important;
 }
 
-/* ═══════ BUTTONS ═══════ */
 .stButton > button[kind="primary"],
 .stButton > button[data-testid="stBaseButton-primary"] {
     background: linear-gradient(135deg, var(--emerald-400), var(--emerald-300)) !important;
@@ -315,7 +298,6 @@ section[data-testid="stSidebar"] .stDateInput label {
     background: rgba(46, 204, 113, 0.06) !important;
 }
 
-/* ═══════ TABS ═══════ */
 .stTabs [data-baseweb="tab-list"] {
     gap: 4px !important;
     background: var(--charcoal-700) !important;
@@ -338,7 +320,6 @@ section[data-testid="stSidebar"] .stDateInput label {
     border-bottom-color: transparent !important;
 }
 
-/* ═══════ DATAFRAMES ═══════ */
 [data-testid="stDataFrame"] {
     border: 1px solid var(--glass-border) !important;
     border-radius: 10px !important;
@@ -346,7 +327,6 @@ section[data-testid="stSidebar"] .stDateInput label {
     animation: fadeIn 0.5s ease-out;
 }
 
-/* ═══════ HR / DIVIDERS ═══════ */
 hr {
     border: none !important;
     height: 1px !important;
@@ -357,7 +337,6 @@ hr {
     margin: 2rem 0 !important;
 }
 
-/* ═══════ PORTFOLIO STRATEGY LABELS ═══════ */
 .qf-strategy-label {
     font-family: 'DM Sans', sans-serif;
     font-size: 0.65rem;
@@ -369,29 +348,14 @@ hr {
     display: inline-block;
     margin-bottom: 0.5rem;
 }
-.qf-strategy-sharpe {
-    color: #22c55e;
-    background: rgba(34, 197, 94, 0.08);
-    border: 1px solid rgba(34, 197, 94, 0.2);
-}
-.qf-strategy-minvar {
-    color: #f59e0b;
-    background: rgba(245, 158, 11, 0.08);
-    border: 1px solid rgba(245, 158, 11, 0.2);
-}
-.qf-strategy-rp {
-    color: #ec4899;
-    background: rgba(236, 72, 153, 0.08);
-    border: 1px solid rgba(236, 72, 153, 0.2);
-}
+.qf-strategy-sharpe { color: #22c55e; background: rgba(34, 197, 94, 0.08); border: 1px solid rgba(34, 197, 94, 0.2); }
+.qf-strategy-minvar { color: #f59e0b; background: rgba(245, 158, 11, 0.08); border: 1px solid rgba(245, 158, 11, 0.2); }
+.qf-strategy-rp { color: #ec4899; background: rgba(236, 72, 153, 0.08); border: 1px solid rgba(236, 72, 153, 0.2); }
 
-/* ═══════ SPINNER ═══════ */
 .stSpinner > div { border-top-color: var(--emerald-500) !important; }
 
-/* ═══════ FADE UTILITIES ═══════ */
 .qf-fade-in { animation: fadeInUp 0.6s ease-out; }
 
-/* ═══════ BLOCKQUOTE ═══════ */
 blockquote {
     border-left: 3px solid var(--emerald-500) !important;
     background: rgba(46, 204, 113, 0.03) !important;
@@ -402,7 +366,6 @@ blockquote {
     color: var(--text-secondary) !important;
 }
 
-/* ═══════ FOOTER ═══════ */
 .qf-footer {
     text-align: center;
     color: var(--text-muted);
@@ -421,7 +384,6 @@ blockquote {
     margin-top: 0.5rem;
 }
 
-/* ═══════ PLOTLY CHART CONTAINERS ═══════ */
 [data-testid="stPlotlyChart"] {
     border: 1px solid var(--glass-border);
     border-radius: 12px;
@@ -434,7 +396,6 @@ blockquote {
     box-shadow: 0 4px 24px rgba(46, 204, 113, 0.06);
 }
 
-/* ═══════ MULTISELECT ═══════ */
 [data-testid="stMultiSelect"] span[data-baseweb="tag"] {
     background: rgba(46, 204, 113, 0.1) !important;
     border: 1px solid rgba(46, 204, 113, 0.2) !important;
@@ -444,14 +405,12 @@ blockquote {
     border-radius: 6px !important;
 }
 
-/* ═══════ ALERTS ═══════ */
 [data-testid="stAlert"] {
     border-radius: 10px !important;
     font-family: 'DM Sans', sans-serif !important;
     animation: fadeIn 0.4s ease-out;
 }
 
-/* ═══════ MOBILE ═══════ */
 @media (max-width: 768px) {
     .qf-header { padding: 1.5rem 1.5rem; }
     .qf-header-content { gap: 1.25rem; flex-wrap: wrap; }
@@ -1041,7 +1000,7 @@ else:
 run_button = st.sidebar.button("Optimize", use_container_width=True, type="primary")
 
 # ──────────────────────────────────────────────────────────────
-# ANIMATED HEADER WITH FROG LOGO
+# HEADER
 # ──────────────────────────────────────────────────────────────
 
 st.markdown("""
@@ -1085,7 +1044,11 @@ if run_button or "results" in st.session_state:
         st.stop()
 
     prices = prices[valid_tickers]
-    daily_returns = np.log(prices / prices.shift(1)).dropna()
+    # ──────────────────────────────────────────────────────────
+    # SIMPLE RETURNS (not log) — mathematically consistent
+    # with portfolio weighted sum R_p = w · R
+    # ──────────────────────────────────────────────────────────
+    daily_returns = prices.pct_change().dropna()
     mean_returns = daily_returns.mean() * TRADING_DAYS
     cov_matrix = daily_returns.cov() * TRADING_DAYS
     corr_matrix = daily_returns.corr()
