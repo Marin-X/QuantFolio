@@ -3,21 +3,7 @@ QuantFolio — Quantitative Portfolio Optimization & Factor Analysis Engine
 Built by Marin Xhemollari | marinxhemollari.com
 
 v3.0 — Adds Fama-French factor regression and market regime analysis.
-
-Implements:
-- Mean-Variance Optimization (Markowitz, 1952)
-- Efficient Frontier + Capital Market Line
-- Maximum Sharpe Ratio / Global Minimum Variance / Risk Parity portfolios
-- Monte Carlo simulation of random allocations
-- Portfolio backtesting with equity curves
-- Value at Risk (VaR) and Conditional VaR (CVaR)
-- Return distribution analysis with normal overlay
-- Rolling volatility and correlation analysis
-- Risk contribution decomposition
-- Fama-French 3-factor and 5-factor regression (NEW)
-- Market regime detection (bull / bear / high-vol) (NEW)
-- Regime-conditional portfolio performance (NEW)
-- CSV export of optimal weights
+v3.0.1 — Dark-mode contrast boost for visible animations.
 """
 
 import streamlit as st
@@ -44,7 +30,7 @@ st.set_page_config(
 )
 
 # ──────────────────────────────────────────────────────────────
-# CSS — Charcoal / Emerald Theme
+# CSS — Charcoal / Emerald Theme (dark-mode-boosted)
 # ──────────────────────────────────────────────────────────────
 
 st.markdown("""
@@ -65,9 +51,9 @@ st.markdown("""
     --text-primary: #e8e8e8;
     --text-secondary: rgba(232, 232, 232, 0.6);
     --text-muted: rgba(232, 232, 232, 0.35);
-    --glass-bg: rgba(20, 20, 20, 0.6);
-    --glass-border: rgba(46, 204, 113, 0.12);
-    --glass-border-hover: rgba(46, 204, 113, 0.25);
+    --glass-bg: rgba(22, 22, 22, 0.7);
+    --glass-border: rgba(46, 204, 113, 0.22);
+    --glass-border-hover: rgba(46, 204, 113, 0.40);
 }
 
 @keyframes gradientShift {
@@ -84,8 +70,16 @@ st.markdown("""
     to   { opacity: 1; }
 }
 @keyframes pulseGlow {
-    0%, 100% { box-shadow: 0 0 20px rgba(46, 204, 113, 0.08); }
-    50%      { box-shadow: 0 0 40px rgba(46, 204, 113, 0.18); }
+    0%, 100% { box-shadow: 0 0 24px rgba(46, 204, 113, 0.18); }
+    50%      { box-shadow: 0 0 48px rgba(46, 204, 113, 0.40); }
+}
+@keyframes shimmerSweep {
+    0%   { background-position: -150% center; }
+    100% { background-position: 250% center; }
+}
+@keyframes borderBreathe {
+    0%, 100% { border-color: rgba(46, 204, 113, 0.22); }
+    50%      { border-color: rgba(46, 204, 113, 0.42); }
 }
 @keyframes logoFloat {
     0%, 100% { transform: translateY(0px); }
@@ -109,31 +103,48 @@ html, body, [data-testid="stAppViewContainer"] {
 
 .qf-header {
     background: linear-gradient(135deg,
-        var(--charcoal-800) 0%, rgba(46, 204, 113, 0.06) 25%,
-        var(--charcoal-700) 50%, rgba(26, 188, 156, 0.06) 75%,
+        var(--charcoal-800) 0%, rgba(46, 204, 113, 0.22) 25%,
+        var(--charcoal-700) 50%, rgba(26, 188, 156, 0.22) 75%,
         var(--charcoal-800) 100%);
     background-size: 400% 400%;
-    animation: gradientShift 12s ease infinite, fadeInUp 0.8s ease-out;
-    border: 1px solid var(--glass-border);
+    animation: gradientShift 10s ease infinite,
+               fadeInUp 0.8s ease-out,
+               borderBreathe 6s ease-in-out infinite;
+    border: 1px solid rgba(46, 204, 113, 0.28);
     border-radius: 16px;
     padding: 2.5rem 3rem;
     margin-bottom: 2rem;
     position: relative; overflow: hidden;
+    box-shadow: 0 0 40px rgba(46, 204, 113, 0.15),
+                inset 0 1px 0 rgba(46, 204, 113, 0.10);
 }
 .qf-header::before {
     content: '';
     position: absolute; top: 0; left: 0; right: 0; bottom: 0;
-    background: radial-gradient(ellipse at 20% 50%, rgba(46, 204, 113, 0.04) 0%, transparent 70%);
+    background: radial-gradient(ellipse at 20% 50%, rgba(46, 204, 113, 0.14) 0%, transparent 65%);
     pointer-events: none;
+    z-index: 0;
+}
+.qf-header::after {
+    content: '';
+    position: absolute; top: 0; left: 0; right: 0; bottom: 0;
+    background: linear-gradient(105deg,
+        transparent 40%,
+        rgba(46, 204, 113, 0.14) 50%,
+        transparent 60%);
+    background-size: 200% 100%;
+    animation: shimmerSweep 7s ease-in-out infinite;
+    pointer-events: none;
+    z-index: 0;
 }
 .qf-header-content {
     display: flex; align-items: center; gap: 2.5rem;
-    position: relative; z-index: 1; min-width: 0;
+    position: relative; z-index: 2; min-width: 0;
 }
 .qf-logo {
     width: 64px; height: 64px;
     animation: logoFloat 4s ease-in-out infinite;
-    filter: drop-shadow(0 0 8px rgba(46, 204, 113, 0.25));
+    filter: drop-shadow(0 0 14px rgba(46, 204, 113, 0.55));
     flex-shrink: 0;
 }
 .qf-title-wrap { display: flex; flex-direction: column; min-width: 0; flex: 1; }
@@ -150,6 +161,7 @@ html, body, [data-testid="stAppViewContainer"] {
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
     background-clip: text;
+    text-shadow: 0 0 30px rgba(46, 204, 113, 0.3);
 }
 .qf-subtitle {
     font-family: 'DM Sans', sans-serif;
@@ -159,11 +171,12 @@ html, body, [data-testid="stAppViewContainer"] {
 .qf-version {
     font-family: 'JetBrains Mono', monospace;
     font-size: 0.7rem; color: var(--emerald-500);
-    background: rgba(46, 204, 113, 0.08);
-    border: 1px solid rgba(46, 204, 113, 0.15);
+    background: rgba(46, 204, 113, 0.12);
+    border: 1px solid rgba(46, 204, 113, 0.25);
     padding: 0.2rem 0.6rem; border-radius: 4px;
     letter-spacing: 0.05em;
     align-self: center; flex-shrink: 0; margin-left: 0.75rem;
+    box-shadow: 0 0 12px rgba(46, 204, 113, 0.15);
 }
 
 h2 {
@@ -190,9 +203,9 @@ div[data-testid="stMetric"] {
 }
 div[data-testid="stMetric"]:hover {
     border-color: var(--glass-border-hover) !important;
-    background: rgba(20, 20, 20, 0.8) !important;
+    background: rgba(26, 26, 26, 0.85) !important;
     transform: translateY(-2px);
-    box-shadow: 0 8px 32px rgba(46, 204, 113, 0.1);
+    box-shadow: 0 8px 32px rgba(46, 204, 113, 0.25);
 }
 div[data-testid="stMetric"] label {
     font-family: 'DM Sans', sans-serif !important;
@@ -205,11 +218,12 @@ div[data-testid="stMetric"] [data-testid="stMetricValue"] {
     font-size: 1.4rem !important; font-weight: 600 !important;
     color: var(--emerald-500) !important;
     white-space: nowrap !important; overflow: visible !important;
+    text-shadow: 0 0 20px rgba(46, 204, 113, 0.25);
 }
 
 section[data-testid="stSidebar"] {
     background: var(--charcoal-800) !important;
-    border-right: 1px solid rgba(46, 204, 113, 0.08) !important;
+    border-right: 1px solid rgba(46, 204, 113, 0.15) !important;
 }
 section[data-testid="stSidebar"] .stMarkdown h2,
 section[data-testid="stSidebar"] .stMarkdown h3 {
@@ -240,12 +254,12 @@ section[data-testid="stSidebar"] .stDateInput label {
     border: none !important; border-radius: 8px !important;
     padding: 0.6rem 1.5rem !important;
     transition: all 0.3s ease !important;
-    box-shadow: 0 4px 16px rgba(46, 204, 113, 0.2) !important;
+    box-shadow: 0 4px 20px rgba(46, 204, 113, 0.35) !important;
 }
 .stButton > button[kind="primary"]:hover,
 .stButton > button[data-testid="stBaseButton-primary"]:hover {
     transform: translateY(-1px) !important;
-    box-shadow: 0 6px 24px rgba(46, 204, 113, 0.35) !important;
+    box-shadow: 0 6px 28px rgba(46, 204, 113, 0.55) !important;
 }
 .stDownloadButton > button {
     background: var(--glass-bg) !important;
@@ -258,13 +272,14 @@ section[data-testid="stSidebar"] .stDateInput label {
 }
 .stDownloadButton > button:hover {
     border-color: var(--emerald-500) !important;
-    background: rgba(46, 204, 113, 0.06) !important;
+    background: rgba(46, 204, 113, 0.1) !important;
+    box-shadow: 0 0 20px rgba(46, 204, 113, 0.2) !important;
 }
 
 .stTabs [data-baseweb="tab-list"] {
     gap: 4px !important; background: var(--charcoal-700) !important;
     border-radius: 10px !important; padding: 4px !important;
-    border: 1px solid rgba(255,255,255,0.04);
+    border: 1px solid rgba(46, 204, 113, 0.12);
 }
 .stTabs [data-baseweb="tab"] {
     font-family: 'DM Sans', sans-serif !important;
@@ -273,8 +288,9 @@ section[data-testid="stSidebar"] .stDateInput label {
     color: var(--text-secondary) !important;
 }
 .stTabs [aria-selected="true"] {
-    background: rgba(46, 204, 113, 0.1) !important;
+    background: rgba(46, 204, 113, 0.18) !important;
     color: var(--emerald-500) !important;
+    box-shadow: 0 0 16px rgba(46, 204, 113, 0.2);
 }
 
 [data-testid="stDataFrame"] {
@@ -285,7 +301,7 @@ section[data-testid="stSidebar"] .stDateInput label {
 
 hr {
     border: none !important; height: 1px !important;
-    background: linear-gradient(90deg, transparent, rgba(46, 204, 113, 0.15), transparent) !important;
+    background: linear-gradient(90deg, transparent, rgba(46, 204, 113, 0.30), transparent) !important;
     margin: 2rem 0 !important;
 }
 
@@ -296,9 +312,9 @@ hr {
     padding: 0.25rem 0.65rem; border-radius: 4px;
     display: inline-block; margin-bottom: 0.5rem;
 }
-.qf-strategy-sharpe { color: #22c55e; background: rgba(34, 197, 94, 0.08); border: 1px solid rgba(34, 197, 94, 0.2); }
-.qf-strategy-minvar { color: #f59e0b; background: rgba(245, 158, 11, 0.08); border: 1px solid rgba(245, 158, 11, 0.2); }
-.qf-strategy-rp { color: #ec4899; background: rgba(236, 72, 153, 0.08); border: 1px solid rgba(236, 72, 153, 0.2); }
+.qf-strategy-sharpe { color: #22c55e; background: rgba(34, 197, 94, 0.12); border: 1px solid rgba(34, 197, 94, 0.3); }
+.qf-strategy-minvar { color: #f59e0b; background: rgba(245, 158, 11, 0.12); border: 1px solid rgba(245, 158, 11, 0.3); }
+.qf-strategy-rp { color: #ec4899; background: rgba(236, 72, 153, 0.12); border: 1px solid rgba(236, 72, 153, 0.3); }
 
 .qf-regime-label {
     font-family: 'JetBrains Mono', monospace;
@@ -312,10 +328,11 @@ hr {
 
 blockquote {
     border-left: 3px solid var(--emerald-500) !important;
-    background: rgba(46, 204, 113, 0.03) !important;
+    background: rgba(46, 204, 113, 0.06) !important;
     padding: 0.8rem 1.2rem !important; border-radius: 0 8px 8px 0 !important;
     font-family: 'DM Sans', sans-serif !important; font-size: 0.88rem !important;
     color: var(--text-secondary) !important;
+    box-shadow: 0 0 16px rgba(46, 204, 113, 0.08);
 }
 
 .qf-footer {
@@ -337,12 +354,12 @@ blockquote {
 }
 [data-testid="stPlotlyChart"]:hover {
     border-color: var(--glass-border-hover);
-    box-shadow: 0 4px 24px rgba(46, 204, 113, 0.06);
+    box-shadow: 0 4px 32px rgba(46, 204, 113, 0.15);
 }
 
 [data-testid="stMultiSelect"] span[data-baseweb="tag"] {
-    background: rgba(46, 204, 113, 0.1) !important;
-    border: 1px solid rgba(46, 204, 113, 0.2) !important;
+    background: rgba(46, 204, 113, 0.15) !important;
+    border: 1px solid rgba(46, 204, 113, 0.3) !important;
     color: var(--emerald-500) !important;
     font-family: 'JetBrains Mono', monospace !important;
     font-size: 0.75rem !important;
@@ -384,7 +401,6 @@ POPULAR_CRYPTO = [
     "DOT-USD", "LINK-USD", "MATIC-USD", "ATOM-USD",
 ]
 
-# Ken French data library — Fama-French factor URLs
 FF3_URL = "https://mba.tuck.dartmouth.edu/pages/faculty/ken.french/ftp/F-F_Research_Data_Factors_daily_CSV.zip"
 FF5_URL = "https://mba.tuck.dartmouth.edu/pages/faculty/ken.french/ftp/F-F_Research_Data_5_Factors_2x3_daily_CSV.zip"
 MOM_URL = "https://mba.tuck.dartmouth.edu/pages/faculty/ken.french/ftp/F-F_Momentum_Factor_daily_CSV.zip"
@@ -527,27 +543,16 @@ def calc_backtest_stats(curve, risk_free):
 
 @st.cache_data(ttl=24 * 3600, show_spinner=False)
 def fetch_ff_factors(model="FF5"):
-    """
-    Fetch Fama-French factor data from Ken French's Data Library.
-    Returns daily factor returns as percentages (not decimals).
-    Columns depend on model: FF3 → Mkt-RF, SMB, HML, RF
-                             FF5 → Mkt-RF, SMB, HML, RMW, CMA, RF
-                             Adds MOM (momentum) if available.
-    """
     try:
         url = FF5_URL if model == "FF5" else FF3_URL
-        # Download zip
         with urllib.request.urlopen(url, timeout=30) as response:
             zip_data = response.read()
-        # Extract CSV
         with zipfile.ZipFile(io.BytesIO(zip_data)) as z:
             csv_name = z.namelist()[0]
             with z.open(csv_name) as f:
                 raw = f.read().decode("utf-8", errors="ignore")
 
-        # Parse — French CSVs have preamble lines and annual data at the bottom
         lines = raw.split("\n")
-        # Find the header line (first line starting with a digit-like token after whitespace)
         start_idx = None
         for i, line in enumerate(lines):
             parts = [p.strip() for p in line.split(",")]
@@ -556,12 +561,10 @@ def fetch_ff_factors(model="FF5"):
                 break
         if start_idx is None:
             return None
-        # Find header (last line before first data line where we see column names)
         header_idx = start_idx - 1
         while header_idx >= 0 and not lines[header_idx].strip():
             header_idx -= 1
 
-        # Identify end — stop when we hit an empty line or annual data block
         end_idx = start_idx
         while end_idx < len(lines):
             line = lines[end_idx].strip()
@@ -572,31 +575,27 @@ def fetch_ff_factors(model="FF5"):
                 break
             end_idx += 1
 
-        # Build CSV for pandas
         header_line = lines[header_idx]
         data_lines = lines[start_idx:end_idx]
         csv_text = header_line + "\n" + "\n".join(data_lines)
 
         df = pd.read_csv(io.StringIO(csv_text))
-        # Rename date column (French uses blank or "Unnamed: 0")
         date_col = df.columns[0]
         df = df.rename(columns={date_col: "Date"})
         df["Date"] = pd.to_datetime(df["Date"], format="%Y%m%d", errors="coerce")
         df = df.dropna(subset=["Date"])
         df = df.set_index("Date")
-        # Convert percentages from string to float
         for col in df.columns:
             df[col] = pd.to_numeric(df[col], errors="coerce")
-        df = df / 100.0  # French factors are in percentage points
+        df = df / 100.0
         return df
 
-    except Exception as e:
+    except Exception:
         return None
 
 
 @st.cache_data(ttl=24 * 3600, show_spinner=False)
 def fetch_momentum_factor():
-    """Fetch momentum factor separately (not part of FF3/FF5 by default)."""
     try:
         with urllib.request.urlopen(MOM_URL, timeout=30) as response:
             zip_data = response.read()
@@ -633,12 +632,10 @@ def fetch_momentum_factor():
         df = df.rename(columns={date_col: "Date"})
         df["Date"] = pd.to_datetime(df["Date"], format="%Y%m%d", errors="coerce")
         df = df.dropna(subset=["Date"]).set_index("Date")
-        # The momentum column is often named "Mom   " with trailing spaces
         df.columns = [c.strip() for c in df.columns]
         for col in df.columns:
             df[col] = pd.to_numeric(df[col], errors="coerce")
         df = df / 100.0
-        # Rename to "MOM" for consistency
         mom_col = [c for c in df.columns if "Mom" in c or "MOM" in c.upper()]
         if mom_col:
             df = df[mom_col].rename(columns={mom_col[0]: "MOM"})
@@ -649,11 +646,6 @@ def fetch_momentum_factor():
 
 
 def run_factor_regression(portfolio_returns, factor_df, factor_cols):
-    """
-    OLS regression of (R_p - R_f) on factor returns.
-    Returns dict with alpha, betas, t-stats, R², adjusted R².
-    """
-    # Align by date
     merged = pd.concat([portfolio_returns.rename("R_p"), factor_df], axis=1).dropna()
     if len(merged) < 30:
         return None
@@ -663,10 +655,8 @@ def run_factor_regression(portfolio_returns, factor_df, factor_cols):
     y = excess.values
 
     n, k = X.shape
-    # Add intercept column
     X_ = np.column_stack([np.ones(n), X])
 
-    # OLS: β = (XᵀX)⁻¹ Xᵀy
     try:
         XtX_inv = np.linalg.inv(X_.T @ X_)
     except np.linalg.LinAlgError:
@@ -679,13 +669,11 @@ def run_factor_regression(portfolio_returns, factor_df, factor_cols):
     r_squared = 1 - rss / tss if tss > 0 else 0
     adj_r_squared = 1 - (1 - r_squared) * (n - 1) / (n - k - 1) if n > k + 1 else 0
 
-    # Standard errors
     sigma2 = rss / (n - k - 1) if n > k + 1 else rss
     var_beta = sigma2 * np.diag(XtX_inv)
     se_beta = np.sqrt(np.maximum(var_beta, 0))
     t_stats = beta / np.where(se_beta > 0, se_beta, np.nan)
 
-    # Annualize alpha (it's a daily excess return)
     alpha_daily = beta[0]
     alpha_annual = alpha_daily * TRADING_DAYS
 
@@ -710,7 +698,6 @@ def run_factor_regression(portfolio_returns, factor_df, factor_cols):
 
 @st.cache_data(ttl=3600, show_spinner=False)
 def fetch_market_proxy(start, end):
-    """Fetch SPY as the market regime proxy."""
     try:
         data = yf.download("SPY", start=start, end=end, auto_adjust=True, progress=False)
         if data.empty:
@@ -723,26 +710,15 @@ def fetch_market_proxy(start, end):
 
 
 def detect_regimes(market_prices, dd_threshold=0.10, vol_lookback=20, vol_threshold_quantile=0.85):
-    """
-    Classify each trading day into one of three regimes:
-      - BULL: in an uptrend (not in drawdown > threshold)
-      - BEAR: drawdown from recent peak exceeds threshold
-      - HIGH_VOL: realized vol exceeds quantile of historical realized vol
-
-    Note: HIGH_VOL can overlap with BEAR — we prioritize HIGH_VOL when both trigger.
-    """
     prices = market_prices["SPY"] if "SPY" in market_prices.columns else market_prices.iloc[:, 0]
     returns = prices.pct_change().dropna()
 
-    # Drawdown
     running_max = prices.cummax()
     drawdown = (prices - running_max) / running_max
 
-    # Rolling realized volatility (annualized)
     rolling_vol = returns.rolling(vol_lookback).std() * np.sqrt(TRADING_DAYS)
     vol_threshold = rolling_vol.quantile(vol_threshold_quantile)
 
-    # Classify
     regime = pd.Series("BULL", index=prices.index)
     regime[drawdown < -dd_threshold] = "BEAR"
     regime[rolling_vol > vol_threshold] = "HIGH_VOL"
@@ -751,7 +727,6 @@ def detect_regimes(market_prices, dd_threshold=0.10, vol_lookback=20, vol_thresh
 
 
 def regime_conditional_stats(portfolio_returns, regimes, risk_free_daily):
-    """Compute mean return, vol, and Sharpe within each regime."""
     merged = pd.concat([portfolio_returns.rename("R"), regimes.rename("regime")], axis=1).dropna()
     stats = {}
     for reg in ["BULL", "BEAR", "HIGH_VOL"]:
@@ -801,7 +776,7 @@ COLORS = {
     "assets":       "#64748b",
     "equal_weight": "#94a3b8",
     "bg":           "rgba(0,0,0,0)",
-    "grid":         "rgba(46, 204, 113, 0.06)",
+    "grid":         "rgba(46, 204, 113, 0.08)",
     "text":         "rgba(232, 232, 232, 0.6)",
     "text_bright":  "rgba(232, 232, 232, 0.85)",
     "bull":         "rgba(34, 197, 94, 0.15)",
@@ -815,10 +790,10 @@ PLOT_LAYOUT = dict(
     font=dict(color=COLORS["text"], size=12, family="DM Sans, sans-serif"),
     margin=dict(l=48, r=24, t=56, b=48),
     xaxis=dict(gridcolor=COLORS["grid"], zeroline=False,
-               linecolor="rgba(46, 204, 113, 0.1)",
+               linecolor="rgba(46, 204, 113, 0.15)",
                tickfont=dict(family="JetBrains Mono, monospace", size=10)),
     yaxis=dict(gridcolor=COLORS["grid"], zeroline=False,
-               linecolor="rgba(46, 204, 113, 0.1)",
+               linecolor="rgba(46, 204, 113, 0.15)",
                tickfont=dict(family="JetBrains Mono, monospace", size=10)),
     title_font=dict(family="DM Sans, sans-serif", size=16, color=COLORS["text_bright"]),
     hoverlabel=dict(bgcolor="rgba(14, 14, 14, 0.95)",
@@ -980,12 +955,9 @@ def plot_backtest(prices, sharpe_w, minvar_w, rp_w, tickers, show_rp):
 
 
 def plot_backtest_with_regimes(curve, regimes, title="Equity Curve with Market Regimes"):
-    """Shade background by regime on top of equity curve."""
     fig = go.Figure()
 
-    # Get regime change points
     aligned = regimes.reindex(curve.index, method="ffill").fillna("BULL")
-    # Find regime spans
     changes = (aligned != aligned.shift(1)).cumsum()
     for _, grp in aligned.groupby(changes):
         reg = grp.iloc[0]
@@ -1001,7 +973,6 @@ def plot_backtest_with_regimes(curve, regimes, title="Equity Curve with Market R
                              name="Max Sharpe Portfolio",
                              line=dict(width=2.5, color=COLORS["sharpe"])))
 
-    # Add legend proxies for shading
     fig.add_trace(go.Scatter(x=[None], y=[None], mode="markers",
                              marker=dict(size=14, color="rgba(239, 68, 68, 0.5)", symbol="square"),
                              name="Bear (> 10% drawdown)"))
@@ -1088,7 +1059,6 @@ def plot_rolling_correlation(daily_returns, tickers, window=60):
 
 
 def plot_factor_betas(reg_results, strategy_names):
-    """Grouped bar chart of factor betas across strategies."""
     factor_names = list(reg_results[strategy_names[0]]["betas"].keys())
     fig = go.Figure()
     strategy_colors = {
@@ -1117,7 +1087,6 @@ def plot_factor_betas(reg_results, strategy_names):
 
 
 def plot_regime_stats_bar(regime_stats_dict, strategy_names):
-    """Show annualized return in each regime for each strategy."""
     regimes = ["BULL", "BEAR", "HIGH_VOL"]
     regime_display = {"BULL": "Bull", "BEAR": "Bear", "HIGH_VOL": "High Volatility"}
     fig = go.Figure()
@@ -1271,7 +1240,6 @@ if run_button or "results" in st.session_state:
 
     prices = prices[valid_tickers]
 
-    # Simple returns for mathematical consistency
     daily_returns = prices.pct_change().dropna()
     mean_returns = daily_returns.mean() * TRADING_DAYS
     cov_matrix = daily_returns.cov() * TRADING_DAYS
@@ -1317,7 +1285,6 @@ if run_button or "results" in st.session_state:
     asset_rets = mean_returns.values
     st.session_state["results"] = True
 
-    # ══════════ RESULTS ══════════
     st.markdown("## Optimal Portfolios")
 
     if show_risk_parity:
@@ -1373,7 +1340,6 @@ if run_button or "results" in st.session_state:
         use_container_width=True,
     )
 
-    # ═══ ALLOCATIONS ═══
     st.markdown("## Portfolio Allocations")
     if show_risk_parity:
         cp1, cp2, cp3 = st.columns(3)
@@ -1410,7 +1376,6 @@ if run_button or "results" in st.session_state:
                 st.plotly_chart(plot_risk_contributions(rp_weights, cov_matrix.values, valid_tickers, "Risk Parity"),
                                 use_container_width=True)
 
-    # ═══ WEIGHTS TABLE ═══
     st.markdown("### Detailed Weights")
     weight_data = {
         "Ticker": valid_tickers,
@@ -1433,7 +1398,6 @@ if run_button or "results" in st.session_state:
 
     st.markdown("---")
 
-    # ═══ BACKTEST ═══
     if show_backtest:
         st.markdown("## Backtest")
         bt_fig, sharpe_curve, minvar_curve, rp_curve, equal_curve = plot_backtest(
@@ -1454,7 +1418,6 @@ if run_button or "results" in st.session_state:
         minvar_curve = backtest_portfolio(prices, minvar_weights, valid_tickers)
         rp_curve = backtest_portfolio(prices, rp_weights, valid_tickers) if show_risk_parity else None
 
-    # ═══ FACTOR REGRESSION (v3.0) ═══
     if show_factor:
         st.markdown("## Factor Regression — Fama-French Decomposition")
         st.markdown(
@@ -1467,7 +1430,6 @@ if run_button or "results" in st.session_state:
         )
 
         with st.spinner("Loading Fama-French factors from Ken French data library..."):
-            # Determine which model
             want_mom = "MOM" in ff_model
             base = "FF5" if "FF5" in ff_model else "FF3"
             ff_data = fetch_ff_factors(base)
@@ -1477,7 +1439,6 @@ if run_button or "results" in st.session_state:
             st.warning("Could not fetch Fama-French factor data. The Ken French data server may be "
                        "unreachable. Skipping factor regression.")
         else:
-            # Merge momentum if requested
             if want_mom and mom_data is not None:
                 factor_df = ff_data.join(mom_data, how="inner")
                 factor_cols = [c for c in factor_df.columns if c != "RF"]
@@ -1485,7 +1446,6 @@ if run_button or "results" in st.session_state:
                 factor_df = ff_data
                 factor_cols = [c for c in factor_df.columns if c != "RF"]
 
-            # Prepare daily returns from backtest curves (simple returns)
             port_returns = {
                 "Max Sharpe": sharpe_curve.pct_change().dropna(),
                 "Min Variance": minvar_curve.pct_change().dropna(),
@@ -1502,7 +1462,6 @@ if run_button or "results" in st.session_state:
             if not reg_results:
                 st.warning("Not enough overlapping dates between portfolio returns and factor data to run regression.")
             else:
-                # Metric summary
                 strat_names = list(reg_results.keys())
                 n_strat = len(strat_names)
                 cols = st.columns(n_strat)
@@ -1521,11 +1480,9 @@ if run_button or "results" in st.session_state:
                                   help=f"Daily α t-stat = {r['alpha_tstat']:.2f}")
                         m2.metric("R²", f"{r['r_squared']*100:.1f}%")
 
-                # Factor loadings plot
                 st.plotly_chart(plot_factor_betas(reg_results, strat_names),
                                 use_container_width=True)
 
-                # Detailed regression table
                 st.markdown("### Regression Coefficients")
 
                 def _fmt_coef(v, t):
@@ -1565,7 +1522,6 @@ if run_button or "results" in st.session_state:
                 )
                 st.markdown("---")
 
-    # ═══ MARKET REGIME ANALYSIS (v3.0) ═══
     if show_regimes:
         st.markdown("## Market Regime Analysis")
         st.markdown(
@@ -1584,7 +1540,6 @@ if run_button or "results" in st.session_state:
         else:
             regimes, mkt_dd, mkt_vol = detect_regimes(spy_prices)
 
-            # Summary of regime days
             reg_counts = regimes.value_counts()
             total_days = len(regimes)
 
@@ -1599,12 +1554,10 @@ if run_button or "results" in st.session_state:
                             f"{reg_counts.get('HIGH_VOL', 0)}",
                             f"{reg_counts.get('HIGH_VOL', 0)/total_days*100:.0f}% of period")
 
-            # Equity curve with regime shading (Max Sharpe as representative)
             st.plotly_chart(plot_backtest_with_regimes(sharpe_curve, regimes,
                                                        title="Max Sharpe Portfolio — Equity Curve with Regime Overlay"),
                             use_container_width=True)
 
-            # Regime-conditional stats
             port_returns_for_regime = {
                 "Max Sharpe": sharpe_curve.pct_change().dropna(),
                 "Min Variance": minvar_curve.pct_change().dropna(),
@@ -1620,7 +1573,6 @@ if run_button or "results" in st.session_state:
             st.plotly_chart(plot_regime_stats_bar(regime_stats, list(regime_stats.keys())),
                             use_container_width=True)
 
-            # Detailed table
             st.markdown("### Regime-Conditional Performance")
             rows = []
             for strat, stats in regime_stats.items():
@@ -1645,7 +1597,6 @@ if run_button or "results" in st.session_state:
             )
             st.markdown("---")
 
-    # ═══ RETURN DISTRIBUTIONS ═══
     if show_distributions:
         st.markdown("## Return Distribution")
         if show_risk_parity:
@@ -1668,7 +1619,6 @@ if run_button or "results" in st.session_state:
                                 use_container_width=True)
         st.markdown("---")
 
-    # ═══ ANALYSIS TABS ═══
     st.markdown("## Analysis")
     tab_names = ["Cumulative Returns", "Drawdown", "Correlation"]
     if show_rolling:
@@ -1721,15 +1671,11 @@ if run_button or "results" in st.session_state:
     info_col2.metric("Start", prices.index[0].strftime('%Y-%m-%d'))
     info_col3.metric("End", prices.index[-1].strftime('%Y-%m-%d'))
 
-# ──────────────────────────────────────────────────────────────
-# FOOTER
-# ──────────────────────────────────────────────────────────────
-
 st.markdown("---")
 st.markdown("""
 <div class="qf-footer">
     Built by <a href="https://marinxhemollari.com" target="_blank">Marin Xhemollari</a> ·
     Markowitz MVO · Fama-French Factor Model · Regime Detection
-    <div class="qf-footer-mono">quantfolio v3.0 · scipy.optimize.SLSQP · Ken French Data Library · plotly.js</div>
+    <div class="qf-footer-mono">quantfolio v3.0.1 · scipy.optimize.SLSQP · Ken French Data Library · plotly.js</div>
 </div>
 """, unsafe_allow_html=True)
