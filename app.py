@@ -93,10 +93,6 @@ st.markdown("""
     0%, 100% { transform: translateY(0px); }
     50%      { transform: translateY(-6px); }
 }
-@keyframes borderGlow {
-    0%, 100% { border-color: rgba(46, 204, 113, 0.10); }
-    50%      { border-color: rgba(46, 204, 113, 0.30); }
-}
 
 /* ═══════ GLOBAL OVERRIDES ═══════ */
 html, body, [data-testid="stAppViewContainer"] {
@@ -104,7 +100,6 @@ html, body, [data-testid="stAppViewContainer"] {
     color: var(--text-primary) !important;
     font-family: 'DM Sans', sans-serif !important;
 }
-
 .main .block-container {
     padding-top: 1rem !important;
     max-width: 1400px;
@@ -113,10 +108,7 @@ html, body, [data-testid="stAppViewContainer"] {
 /* ═══════ SCROLLBAR ═══════ */
 ::-webkit-scrollbar { width: 6px; }
 ::-webkit-scrollbar-track { background: var(--charcoal-800); }
-::-webkit-scrollbar-thumb {
-    background: var(--charcoal-400);
-    border-radius: 3px;
-}
+::-webkit-scrollbar-thumb { background: var(--charcoal-400); border-radius: 3px; }
 ::-webkit-scrollbar-thumb:hover { background: var(--emerald-400); }
 
 /* ═══════ ANIMATED GRADIENT HEADER ═══════ */
@@ -169,21 +161,20 @@ html, body, [data-testid="stAppViewContainer"] {
     font-family: 'Cormorant Garamond', serif;
     font-size: 3rem;
     font-weight: 700;
-    color: var(--text-primary);
     letter-spacing: -0.02em;
     line-height: 1.1;
     margin: 0;
     display: flex;
     align-items: baseline;
     flex-wrap: wrap;
-    gap: 0.75rem;
+    gap: 0.25rem;
 }
-.qf-title-text {
-    display: inline-block;
-    white-space: nowrap;
+.qf-title-plain {
+    color: var(--text-primary);
 }
-.qf-title span.qf-gradient {
-    background: linear-gradient(135deg, var(--emerald-500), var(--emerald-300));
+.qf-title-accent {
+    color: var(--emerald-500);
+    background: linear-gradient(135deg, #2ecc71 0%, #1abc9c 100%);
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
     background-clip: text;
@@ -207,6 +198,7 @@ html, body, [data-testid="stAppViewContainer"] {
     letter-spacing: 0.05em;
     align-self: center;
     flex-shrink: 0;
+    margin-left: 0.75rem;
 }
 
 /* ═══════ SECTION HEADERS ═══════ */
@@ -365,23 +357,7 @@ hr {
     margin: 2rem 0 !important;
 }
 
-/* ═══════ GLASSMORPHISM SECTION WRAPPERS ═══════ */
-.qf-glass-card {
-    background: var(--glass-bg);
-    backdrop-filter: blur(16px);
-    -webkit-backdrop-filter: blur(16px);
-    border: 1px solid var(--glass-border);
-    border-radius: 14px;
-    padding: 1.5rem 1.8rem;
-    margin-bottom: 1.5rem;
-    animation: fadeInUp 0.6s ease-out;
-    transition: border-color 0.3s ease;
-}
-.qf-glass-card:hover {
-    border-color: var(--glass-border-hover);
-}
-
-/* ═══════ PORTFOLIO STRATEGY CARDS ═══════ */
+/* ═══════ PORTFOLIO STRATEGY LABELS ═══════ */
 .qf-strategy-label {
     font-family: 'DM Sans', sans-serif;
     font-size: 0.65rem;
@@ -409,20 +385,13 @@ hr {
     border: 1px solid rgba(236, 72, 153, 0.2);
 }
 
-/* ═══════ LOADING SPINNER OVERRIDE ═══════ */
-.stSpinner > div {
-    border-top-color: var(--emerald-500) !important;
-}
+/* ═══════ SPINNER ═══════ */
+.stSpinner > div { border-top-color: var(--emerald-500) !important; }
 
-/* ═══════ FADE-IN UTILITY ═══════ */
-.qf-fade-in {
-    animation: fadeInUp 0.6s ease-out;
-}
-.qf-fade-in-delay-1 { animation: fadeInUp 0.6s ease-out 0.1s both; }
-.qf-fade-in-delay-2 { animation: fadeInUp 0.6s ease-out 0.2s both; }
-.qf-fade-in-delay-3 { animation: fadeInUp 0.6s ease-out 0.3s both; }
+/* ═══════ FADE UTILITIES ═══════ */
+.qf-fade-in { animation: fadeInUp 0.6s ease-out; }
 
-/* ═══════ BLOCKQUOTE / INSIGHTS ═══════ */
+/* ═══════ BLOCKQUOTE ═══════ */
 blockquote {
     border-left: 3px solid var(--emerald-500) !important;
     background: rgba(46, 204, 113, 0.03) !important;
@@ -442,11 +411,7 @@ blockquote {
     padding: 2rem 0 1rem;
     animation: fadeIn 0.8s ease-out;
 }
-.qf-footer a {
-    color: var(--emerald-500);
-    text-decoration: none;
-    transition: color 0.2s ease;
-}
+.qf-footer a { color: var(--emerald-500); text-decoration: none; transition: color 0.2s ease; }
 .qf-footer a:hover { color: var(--emerald-300); }
 .qf-footer-mono {
     font-family: 'JetBrains Mono', monospace;
@@ -469,7 +434,7 @@ blockquote {
     box-shadow: 0 4px 24px rgba(46, 204, 113, 0.06);
 }
 
-/* ═══════ MULTISELECT PILLS ═══════ */
+/* ═══════ MULTISELECT ═══════ */
 [data-testid="stMultiSelect"] span[data-baseweb="tag"] {
     background: rgba(46, 204, 113, 0.1) !important;
     border: 1px solid rgba(46, 204, 113, 0.2) !important;
@@ -479,7 +444,7 @@ blockquote {
     border-radius: 6px !important;
 }
 
-/* ═══════ WARNINGS / ERRORS ═══════ */
+/* ═══════ ALERTS ═══════ */
 [data-testid="stAlert"] {
     border-radius: 10px !important;
     font-family: 'DM Sans', sans-serif !important;
@@ -724,7 +689,6 @@ PLOT_LAYOUT = dict(
     ),
 )
 
-# Emerald-tinted palette for pie/bar charts
 EMERALD_PALETTE = [
     "#2ecc71", "#1abc9c", "#27ae60", "#16a085",
     "#22c55e", "#10b981", "#059669", "#047857",
@@ -742,8 +706,6 @@ def plot_efficient_frontier(
     risk_free, show_cml, show_rp,
 ):
     fig = go.Figure()
-
-    # Monte Carlo cloud
     fig.add_trace(go.Scatter(
         x=mc_vol * 100, y=mc_ret * 100, mode="markers",
         marker=dict(size=2.5, opacity=0.25, color=mc_sharpe,
@@ -754,15 +716,11 @@ def plot_efficient_frontier(
         name="Random Portfolios",
         hovertemplate="Vol: %{x:.1f}%<br>Ret: %{y:.1f}%<extra></extra>",
     ))
-
-    # Efficient frontier line
     fig.add_trace(go.Scatter(
         x=frontier_vol * 100, y=frontier_ret * 100,
         mode="lines", line=dict(color=COLORS["frontier"], width=3),
         name="Efficient Frontier",
     ))
-
-    # Capital Market Line
     if show_cml:
         cml_x_max = max(asset_vols.max(), sharpe_vol) * 1.3
         cml_x = np.linspace(0, cml_x_max, 100)
@@ -779,8 +737,6 @@ def plot_efficient_frontier(
                         line=dict(width=2, color="white")),
             name=f"Risk-Free ({risk_free*100:.1f}%)",
         ))
-
-    # Optimal portfolio markers
     fig.add_trace(go.Scatter(
         x=[sharpe_vol * 100], y=[sharpe_ret * 100], mode="markers",
         marker=dict(size=16, color=COLORS["sharpe"], symbol="star",
@@ -803,8 +759,6 @@ def plot_efficient_frontier(
             name="Risk Parity",
             hovertemplate=f"Risk Parity<br>Vol: {rp_vol*100:.2f}%<br>Ret: {rp_ret*100:.2f}%<extra></extra>",
         ))
-
-    # Individual assets
     fig.add_trace(go.Scatter(
         x=asset_vols * 100, y=asset_rets * 100,
         mode="markers+text",
@@ -815,7 +769,6 @@ def plot_efficient_frontier(
         name="Individual Assets",
         hovertemplate="%{text}<br>Vol: %{x:.1f}%<br>Ret: %{y:.1f}%<extra></extra>",
     ))
-
     title = "Efficient Frontier with Capital Market Line" if show_cml else "Efficient Frontier"
     fig.update_layout(
         **PLOT_LAYOUT, title=title,
@@ -849,7 +802,6 @@ def plot_weights_pie(weights, tickers, title):
     mask = weights > 0.005
     filtered_weights = weights[mask]
     filtered_tickers = [t for t, m in zip(tickers, mask) if m]
-
     fig = go.Figure(data=go.Pie(
         labels=filtered_tickers,
         values=np.round(filtered_weights * 100, 2),
@@ -907,7 +859,6 @@ def plot_backtest(prices, sharpe_w, minvar_w, rp_w, tickers, show_rp):
     minvar_curve = backtest_portfolio(prices, minvar_w, tickers)
     rp_curve = backtest_portfolio(prices, rp_w, tickers) if show_rp else None
     equal_curve = backtest_portfolio(prices, eq_w, tickers)
-
     fig = go.Figure()
     fig.add_trace(go.Scatter(
         x=sharpe_curve.index, y=sharpe_curve.values, mode="lines",
@@ -926,7 +877,6 @@ def plot_backtest(prices, sharpe_w, minvar_w, rp_w, tickers, show_rp):
         x=equal_curve.index, y=equal_curve.values, mode="lines",
         name="Equal Weight", line=dict(width=2, color=COLORS["equal_weight"], dash="dot"),
     ))
-
     fig.update_layout(
         **PLOT_LAYOUT, title="Portfolio Backtest (Normalized to 100)",
         xaxis_title="Date", yaxis_title="Portfolio Value", height=450,
@@ -940,7 +890,6 @@ def plot_return_distribution(daily_returns, weights, title, color):
     port_returns = daily_returns.values @ weights
     mu = port_returns.mean()
     sigma = port_returns.std()
-
     fig = go.Figure()
     fig.add_trace(go.Histogram(
         x=port_returns * 100, nbinsx=80,
@@ -969,7 +918,6 @@ def plot_risk_contributions(weights, cov_matrix, tickers, title):
     mask = rc > 0.5
     filtered_rc = rc[mask]
     filtered_tickers = [t for t, m in zip(tickers, mask) if m]
-
     fig = go.Figure(data=go.Bar(
         x=filtered_tickers, y=filtered_rc,
         marker_color=EMERALD_PALETTE[:len(filtered_tickers)],
@@ -1030,7 +978,6 @@ def plot_rolling_correlation(daily_returns, tickers, window=60):
 
 st.sidebar.markdown("## Configuration")
 
-# Asset selection
 st.sidebar.markdown("### Asset Selection")
 asset_type = st.sidebar.radio("Asset class", ["Stocks / ETFs", "Crypto", "Custom"], horizontal=True)
 
@@ -1050,7 +997,6 @@ else:
     )
     selected_tickers = [t.strip().upper() for t in custom_input.split(",") if t.strip()]
 
-# Date range
 st.sidebar.markdown("### Date Range")
 col_start, col_end = st.sidebar.columns(2)
 default_end = datetime.today()
@@ -1058,7 +1004,6 @@ default_start = default_end - timedelta(days=3 * 365)
 start_date = col_start.date_input("Start", value=default_start)
 end_date = col_end.date_input("End", value=default_end)
 
-# Parameters
 st.sidebar.markdown("### Parameters")
 risk_free = st.sidebar.slider(
     "Risk-free rate (%)", min_value=0.0, max_value=10.0, value=5.0, step=0.25,
@@ -1069,7 +1014,6 @@ n_simulations = st.sidebar.select_slider(
     options=[1000, 5000, 10000, 25000, 50000], value=10000,
 )
 
-# Display options
 st.sidebar.markdown("### Display Options")
 show_risk_parity = st.sidebar.checkbox("Risk Parity portfolio", value=True)
 show_cml = st.sidebar.checkbox("Capital Market Line", value=True)
@@ -1108,7 +1052,7 @@ st.markdown("""
              onerror="this.style.display='none'">
         <div class="qf-title-wrap">
             <div class="qf-title">
-                <span class="qf-title-text">Quant<span class="qf-gradient">Folio</span></span>
+                <span class="qf-title-plain">Quant</span><span class="qf-title-accent">Folio</span>
                 <span class="qf-version">v2.0</span>
             </div>
             <div class="qf-subtitle">
@@ -1186,10 +1130,6 @@ if run_button or "results" in st.session_state:
     asset_rets = mean_returns.values
     st.session_state["results"] = True
 
-    # ══════════════════════════════════════════════════════════
-    # RESULTS
-    # ══════════════════════════════════════════════════════════
-
     st.markdown('<div class="qf-fade-in">', unsafe_allow_html=True)
     st.markdown("## Optimal Portfolios")
 
@@ -1236,7 +1176,6 @@ if run_button or "results" in st.session_state:
     st.markdown('</div>', unsafe_allow_html=True)
     st.markdown("---")
 
-    # Efficient Frontier
     st.plotly_chart(
         plot_efficient_frontier(
             frontier_vol, frontier_ret, mc_vol, mc_ret, mc_sharpe,
@@ -1248,7 +1187,6 @@ if run_button or "results" in st.session_state:
         use_container_width=True,
     )
 
-    # Allocations
     st.markdown("## Portfolio Allocations")
     if show_risk_parity:
         cp1, cp2, cp3 = st.columns(3)
@@ -1270,7 +1208,6 @@ if run_button or "results" in st.session_state:
                 plot_weights_pie(rp_weights, valid_tickers, "Risk Parity"),
                 use_container_width=True)
 
-    # Risk contributions
     if show_risk_contrib:
         st.markdown("### Risk Contributions")
         if show_risk_parity:
@@ -1293,7 +1230,6 @@ if run_button or "results" in st.session_state:
                     plot_risk_contributions(rp_weights, cov_matrix.values, valid_tickers, "Risk Parity"),
                     use_container_width=True)
 
-    # Weight table + export
     st.markdown("### Detailed Weights")
     weight_data = {
         "Ticker": valid_tickers,
@@ -1321,7 +1257,6 @@ if run_button or "results" in st.session_state:
 
     st.markdown("---")
 
-    # Backtest
     if show_backtest:
         st.markdown("## Backtest")
         bt_fig, sharpe_curve, minvar_curve, rp_curve, equal_curve = plot_backtest(
@@ -1340,7 +1275,6 @@ if run_button or "results" in st.session_state:
         st.dataframe(pd.DataFrame(bt_data), use_container_width=True)
         st.markdown("---")
 
-    # Return distributions
     if show_distributions:
         st.markdown("## Return Distribution")
         if show_risk_parity:
@@ -1367,7 +1301,6 @@ if run_button or "results" in st.session_state:
                     use_container_width=True)
         st.markdown("---")
 
-    # Analysis tabs
     st.markdown("## Analysis")
     tab_names = ["Cumulative Returns", "Drawdown", "Correlation"]
     if show_rolling:
@@ -1427,7 +1360,6 @@ if run_button or "results" in st.session_state:
             "frequently than a normal distribution predicts."
         )
 
-    # Data summary
     st.markdown("---")
     st.markdown("## Data Summary")
     info_col1, info_col2, info_col3 = st.columns(3)
