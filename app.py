@@ -711,7 +711,7 @@ def fetch_market_proxy(start, end):
 
 def detect_regimes(market_prices, dd_threshold=0.10, vol_lookback=20, vol_threshold_quantile=0.85):
     prices = market_prices["SPY"] if "SPY" in market_prices.columns else market_prices.iloc[:, 0]
-    returns = prices.pct_change().dropna()
+    returns = prices.pct_change()
 
     running_max = prices.cummax()
     drawdown = (prices - running_max) / running_max
