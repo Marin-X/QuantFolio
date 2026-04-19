@@ -128,14 +128,13 @@ html, body, [data-testid="stAppViewContainer"] {
         rgba(26, 188, 156, 0.06) 75%,
         var(--charcoal-800) 100%);
     background-size: 400% 400%;
-    animation: gradientShift 12s ease infinite;
+    animation: gradientShift 12s ease infinite, fadeInUp 0.8s ease-out;
     border: 1px solid var(--glass-border);
     border-radius: 16px;
     padding: 2.5rem 3rem;
     margin-bottom: 2rem;
     position: relative;
     overflow: hidden;
-    animation: gradientShift 12s ease infinite, fadeInUp 0.8s ease-out;
 }
 .qf-header::before {
     content: '';
@@ -148,16 +147,23 @@ html, body, [data-testid="stAppViewContainer"] {
 .qf-header-content {
     display: flex;
     align-items: center;
-    gap: 1.5rem;
+    gap: 2.5rem;
     position: relative;
     z-index: 1;
+    min-width: 0;
 }
 .qf-logo {
     width: 64px;
     height: 64px;
     animation: logoFloat 4s ease-in-out infinite;
-    filter: drop-shadow(0 0 12px rgba(46, 204, 113, 0.3));
+    filter: drop-shadow(0 0 8px rgba(46, 204, 113, 0.25));
     flex-shrink: 0;
+}
+.qf-title-wrap {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+    flex: 1;
 }
 .qf-title {
     font-family: 'Cormorant Garamond', serif;
@@ -167,8 +173,16 @@ html, body, [data-testid="stAppViewContainer"] {
     letter-spacing: -0.02em;
     line-height: 1.1;
     margin: 0;
+    display: flex;
+    align-items: baseline;
+    flex-wrap: wrap;
+    gap: 0.75rem;
 }
-.qf-title span {
+.qf-title-text {
+    display: inline-block;
+    white-space: nowrap;
+}
+.qf-title span.qf-gradient {
     background: linear-gradient(135deg, var(--emerald-500), var(--emerald-300));
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
@@ -184,15 +198,15 @@ html, body, [data-testid="stAppViewContainer"] {
 }
 .qf-version {
     font-family: 'JetBrains Mono', monospace;
-    font-size: 0.65rem;
+    font-size: 0.7rem;
     color: var(--emerald-500);
     background: rgba(46, 204, 113, 0.08);
     border: 1px solid rgba(46, 204, 113, 0.15);
-    padding: 0.15rem 0.5rem;
+    padding: 0.2rem 0.6rem;
     border-radius: 4px;
-    margin-left: 0.75rem;
     letter-spacing: 0.05em;
-    vertical-align: super;
+    align-self: center;
+    flex-shrink: 0;
 }
 
 /* ═══════ SECTION HEADERS ═══════ */
@@ -237,9 +251,11 @@ div[data-testid="stMetric"] label {
 }
 div[data-testid="stMetric"] [data-testid="stMetricValue"] {
     font-family: 'JetBrains Mono', monospace !important;
-    font-size: 1.6rem !important;
+    font-size: 1.4rem !important;
     font-weight: 600 !important;
     color: var(--emerald-500) !important;
+    white-space: nowrap !important;
+    overflow: visible !important;
 }
 div[data-testid="stMetric"] [data-testid="stMetricDelta"] {
     font-family: 'JetBrains Mono', monospace !important;
@@ -468,6 +484,15 @@ blockquote {
     border-radius: 10px !important;
     font-family: 'DM Sans', sans-serif !important;
     animation: fadeIn 0.4s ease-out;
+}
+
+/* ═══════ MOBILE ═══════ */
+@media (max-width: 768px) {
+    .qf-header { padding: 1.5rem 1.5rem; }
+    .qf-header-content { gap: 1.25rem; flex-wrap: wrap; }
+    .qf-logo { width: 48px; height: 48px; }
+    .qf-title { font-size: 2rem; }
+    .qf-subtitle { font-size: 0.85rem; }
 }
 </style>
 """, unsafe_allow_html=True)
@@ -1081,9 +1106,9 @@ st.markdown("""
         <img src="https://marinxhemollari.com/frog-logo.svg"
              alt="QuantFolio" class="qf-logo"
              onerror="this.style.display='none'">
-        <div>
+        <div class="qf-title-wrap">
             <div class="qf-title">
-                Quant<span>Folio</span>
+                <span class="qf-title-text">Quant<span class="qf-gradient">Folio</span></span>
                 <span class="qf-version">v2.0</span>
             </div>
             <div class="qf-subtitle">
